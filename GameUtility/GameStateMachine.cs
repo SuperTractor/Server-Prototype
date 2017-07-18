@@ -14,7 +14,11 @@ namespace GameUtility
             Deal2Bid,   // 发牌到抢底的缓冲阶段
             Bid,    // 抢底阶段
             Bid2Fry,    // 抢底到炒底的缓冲阶段
-            Fry,    // 炒底阶段
+            //Fry,    // 炒底阶段
+            FryShow,    // 炒底阶段的亮牌
+            FryShow2Bury,   // 亮牌到埋底的过渡阶段
+            FryBury2Show,   // 埋底重新回到亮牌的过渡阶段
+            FryBury,    // 炒底阶段的埋底
             Fry2Fight,  // 炒底到对战的缓冲阶段
             Fight,   // 对战阶段
             Fight2Score,    // 对战到计分的缓冲阶段
@@ -32,6 +36,10 @@ namespace GameUtility
             DoneBid2Fry,    // 完成抢底-炒底缓冲阶段的清理, 初始化
             //NoHigherFry,     // 不可能有更高出价者, 炒底结束
             //AllSkipFry,     // 所有玩家跳过炒牌，炒底结束
+            SuccessfulShow,     // 炒底阶段成功亮牌，则可以埋底
+            DoneFryShow2Bury,   // 完成炒底阶段从亮牌到埋底的过渡流程
+            DoneFryBury2Show,   // 完成炒底阶段从埋底重新回到亮牌的过渡流程
+            FryContinue,    // 炒底继续
             FryEnd,     // 炒底结束
             DoneFry2Fight,  // 完成炒底-对战缓冲阶段的清理, 初始化
             PlayerHandCardAllEmpty, // 所有玩家的手牌为空
@@ -58,7 +66,8 @@ namespace GameUtility
                     m_state = State.Bid2Fry;
                     break;
                 case Signal.DoneBid2Fry:
-                    m_state = State.Fry;
+                    //m_state = State.Fry;
+                    m_state = State.FryShow;
                     break;
                 //case Signal.NoHigherFry:
                 //    m_state = State.Fry2Fight;
@@ -66,6 +75,18 @@ namespace GameUtility
                 //case Signal.AllSkipFry:
                 //    m_state = State.Fry2Fight;
                 //    break;
+                case Signal.SuccessfulShow:
+                    m_state = State.FryShow2Bury;
+                    break;
+                case Signal.DoneFryShow2Bury:
+                    m_state = State.FryBury;
+                    break;
+                case Signal.DoneFryBury2Show:
+                    m_state = State.FryShow;
+                    break;
+                case Signal.FryContinue:
+                    m_state = State.FryShow;
+                    break;
                 case Signal.FryEnd:
                     m_state = State.Fry2Fight;
                     break;

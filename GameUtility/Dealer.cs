@@ -15,7 +15,7 @@ namespace GameUtility
         private Card[] m_playerCard;
 
         public List<Card>[] playersHandCard { get; set; }
-
+        // 底牌接口
         public Card[] bottom
         {
             get { return m_bottom; }
@@ -161,7 +161,7 @@ namespace GameUtility
         }
 
         // 判断炒底时增加的筹码牌是否合法
-        public Judgement IsLegalFry(Card[] addFryCards,int playerId)
+        public Judgement IsLegalShow(Card[] addFryCards,int playerId)
         {
             // 测试：总亮牌数比前一个炒底玩家的多就行
             bool isValid;
@@ -174,6 +174,24 @@ namespace GameUtility
             else
             {
                 message = "筹码不够大";
+            }
+            return new Judgement(message, isValid);
+        }
+
+
+        // 判断埋底的合法性（炒底阶段）
+        // 测试：只要埋下的牌数等于 8 就算合法
+        public Judgement IsLegalBury(Card[] cards)
+        {
+            bool isValid = cards.Length == bottomCardNumber;
+            string message;
+            if (isValid)
+            {
+                message = "合法埋底";
+            }
+            else
+            {
+                message = "必须埋 8 张底牌";
             }
             return new Judgement(message, isValid);
         }
@@ -205,6 +223,7 @@ namespace GameUtility
             }
             return new Judgement(message, isValid);
         }
+
 
         public void SetCurrentPlayerId(int id)
         {
@@ -265,6 +284,12 @@ namespace GameUtility
 
         // 判断是否不可能有更高出价者(抢底阶段)
         public bool NoHigherBid()
+        {
+            return false;
+        }
+
+        // 炒底阶段：判断是否不可能有更高筹码者
+        public bool NoHigerFry()
         {
             return false;
         }
