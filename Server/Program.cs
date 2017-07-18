@@ -21,7 +21,7 @@ namespace server_0._0._1
         // 服务器的 IP 地址
         static IPAddress m_ip;
         //static string m_ipStr = "120.24.217.239";
-        static string m_ipStr = "192.168.88.101";
+        static string m_ipStr = "172.21.186.34";
 
         // 开始游戏要求的玩家个数
         // 当前在线的玩家数目
