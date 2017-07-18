@@ -321,7 +321,7 @@ namespace GameUtility
         {
             // 测试：当要求亮牌不比最大亮牌数小时，判定已经没有更高筹码了
             bool noHigherFry = fryCardLowerBound >= m_fryCardLimit;
-            bool allSkipFry = skipFryCount > (playerNumber - 1);
+            bool allSkipFry = skipFryCount >= playerNumber;
             if (noHigherFry)
             {
                 Console.WriteLine("不可能有更高出价者, 炒底结束");
