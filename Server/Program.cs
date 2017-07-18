@@ -21,7 +21,7 @@ namespace server_0._0._1
         // 服务器的 IP 地址
         static IPAddress m_ip;
         //static string m_ipStr = "120.24.217.239";
-        static string m_ipStr = "172.21.26.94";
+        static string m_ipStr = "172.21.186.34";
 
         // 开始游戏要求的玩家个数
         // 当前在线的玩家数目
@@ -222,7 +222,7 @@ namespace server_0._0._1
             {
                 ComServer.Respond(m_players[j].socket, m_dealer.currentFryPlayerId);
             }
-            
+
             // 询问客户端玩家是否选择不跟
             bool isFollow = (bool)ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, "收到");
 
@@ -231,6 +231,7 @@ namespace server_0._0._1
             // 如果玩家有出牌
             if (m_addFryCards.Length > 0)
             {
+                Console.WriteLine("玩家 id=" + m_dealer.currentFryPlayerId + ", 正在亮牌");
                 // 交给荷官检查
                 judgement = m_dealer.IsLegalShow(m_addFryCards, m_dealer.currentFryPlayerId);
                 // 先返回判断结果
@@ -246,6 +247,8 @@ namespace server_0._0._1
                         m_players[m_dealer.currentFryPlayerId].playerInfo.cardInHand.Remove(m_addFryCards[i]);
                     }
                     // 客户端会自行将亮牌从手牌中去除，不用从服务器发送过去了
+                    // 更新炒底的筹码下界
+                    m_dealer.fryCardLowerBound = m_dealer.showCards[m_dealer.currentFryPlayerId].Count;
                 }
                 else// 如果不合法
                 {
@@ -285,20 +288,20 @@ namespace server_0._0._1
             ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, Card.ToInt(m_dealer.bottom));
             // 将底牌加入到炒底玩家的手牌当中去
             m_players[m_dealer.currentFryPlayerId].playerInfo.cardInHand.AddRange(m_dealer.bottom);
-
-
         }
 
         // 处理炒底阶段埋底流程
-        static void FryBury()
+        // 返回：玩家是否完成埋底
+        static bool FryBury()
         {
             Judgement judgement;
-            
+            bool isOk;
             // 接收当前炒底玩家要埋的底牌
             m_buryCards = Card.ToCard((int[])ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, "收到出牌"));
             // 如果玩家有埋底
             if (m_buryCards.Length > 0)
             {
+                Console.WriteLine("玩家 id=" + m_dealer.currentFryPlayerId + "正在埋牌");
                 // 检验埋底的合法性
                 judgement = m_dealer.IsLegalBury(m_buryCards);
                 // 向客户端发送埋底合法性
@@ -321,14 +324,18 @@ namespace server_0._0._1
             }
             else// 如果玩家还没有埋底
             {
-
+                judgement = new Judgement("", false);
             }
+            // 只有当玩家埋了底，而且是合法的，埋底这一步才算结束
+            isOk = judgement.isValid && m_buryCards.Length > 0;
+            return isOk;
         }
 
         // 处理炒底阶段，从埋底重新回到亮牌的过渡流程
         static void FryBury2Show()
         {
-
+            // 设置下一玩家亮牌
+            m_dealer.currentFryPlayerId++;
         }
 
         static void Fry2Fight()
@@ -629,7 +636,7 @@ namespace server_0._0._1
                         // 如果当前玩家成功亮牌
                         if (FryShow())
                         {
-                            Console.WriteLine("玩家 id="+m_dealer.currentFryPlayerId+" 成功亮牌，准备埋底");
+                            Console.WriteLine("玩家 id=" + m_dealer.currentFryPlayerId + " 成功亮牌，准备埋底");
                             // 该玩家得以继续埋底
                             m_gameStateMachine.Update(GameStateMachine.Signal.SuccessfulShow);
 
@@ -644,16 +651,21 @@ namespace server_0._0._1
                         m_gameStateMachine.Update(GameStateMachine.Signal.DoneFryShow2Bury);
                         break;
                     case GameStateMachine.State.FryBury:
-                        FryBury();
-                        // 如果不可能有更高的出价者
-                        if (m_dealer.NoHigerFry())
+                        bool isOk = FryBury();
+                        // 如果炒底阶段结束
+                        //if (m_dealer.NoHigerFry())
+                        if (isOk&&m_dealer.FryEnd())
                         {
                             // 结束炒底流程
                             m_gameStateMachine.Update(GameStateMachine.Signal.FryEnd);
                         }
-                        else// 否则，继续亮牌
+                        else if(isOk)// 否则，如果完成埋底，继续亮牌
                         {
-                            m_gameStateMachine.Update(GameStateMachine.Signal.FryContinue);   
+                            m_gameStateMachine.Update(GameStateMachine.Signal.FryContinue);
+                        }
+                        else// 如果玩家还没有埋底，继续等待玩家埋底
+                        {
+
                         }
                         break;
                     case GameStateMachine.State.FryBury2Show:

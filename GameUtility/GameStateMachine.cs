@@ -85,7 +85,7 @@ namespace GameUtility
                     m_state = State.FryShow;
                     break;
                 case Signal.FryContinue:
-                    m_state = State.FryShow;
+                    m_state = State.FryBury2Show;
                     break;
                 case Signal.FryEnd:
                     m_state = State.Fry2Fight;

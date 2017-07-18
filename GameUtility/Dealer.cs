@@ -56,7 +56,18 @@ namespace GameUtility
 
 
         // 当前炒底玩家
-        public int currentFryPlayerId { get; set; }
+        private int m_currentFryPlayerId;
+        public int currentFryPlayerId
+        {
+            get
+            {
+                return m_currentFryPlayerId;
+            }
+            set
+            {
+                m_currentFryPlayerId = value % playerNumber;
+            }
+        }
         // 炒底亮牌数下界，下一玩家必须亮牌后总数必须比这个数多
         public int fryCardLowerBound { get; set; }
         // 超出 5 个亮牌数就算最大
@@ -161,7 +172,7 @@ namespace GameUtility
         }
 
         // 判断炒底时增加的筹码牌是否合法
-        public Judgement IsLegalShow(Card[] addFryCards,int playerId)
+        public Judgement IsLegalShow(Card[] addFryCards, int playerId)
         {
             // 测试：总亮牌数比前一个炒底玩家的多就行
             bool isValid;
@@ -240,7 +251,7 @@ namespace GameUtility
 
         public void ClearHandOutCards()
         {
-            for(int i = 0; i < playerNumber; i++)
+            for (int i = 0; i < playerNumber; i++)
             {
                 handOutCards[i].Clear();
             }
@@ -289,10 +300,11 @@ namespace GameUtility
         }
 
         // 炒底阶段：判断是否不可能有更高筹码者
-        public bool NoHigerFry()
-        {
-            return false;
-        }
+        //public bool NoHigerFry()
+        //{
+        //    // 测试：当要求亮牌不比最大亮牌数小时，判定已经没有更高筹码了
+        //    return fryCardLowerBound >= m_fryCardLimit;
+        //}
 
         //// 判断是否不可能有更高出价者(炒底阶段)
         //public bool NoHigherFry()
@@ -307,6 +319,7 @@ namespace GameUtility
         // 判断是否结束炒底
         public bool FryEnd()
         {
+            // 测试：当要求亮牌不比最大亮牌数小时，判定已经没有更高筹码了
             bool noHigherFry = fryCardLowerBound >= m_fryCardLimit;
             bool allSkipFry = skipFryCount > (playerNumber - 1);
             if (noHigherFry)
