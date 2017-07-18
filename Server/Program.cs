@@ -226,6 +226,19 @@ namespace server_0._0._1
             // 询问客户端玩家是否选择不跟
             bool isFollow = (bool)ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, "收到");
 
+
+            // 检查当前亮牌玩家是否需要提示
+            bool isNeedTips = (bool)ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, "收到");
+            // 如果玩家需要亮牌提示
+            if (isNeedTips)
+            {
+                // 从荷官处获取亮牌提示
+                Card[] showCardTips = m_dealer.AutoAddShowCard(m_dealer.currentFryPlayerId);
+                // 将亮牌提示返回到客户端
+                ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, Card.ToInt(showCardTips));
+            }
+
+
             // 接收当前炒底玩家的新增亮牌
             m_addFryCards = Card.ToCard((int[])ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, "收到出牌"));
             // 如果玩家有出牌
@@ -245,6 +258,7 @@ namespace server_0._0._1
                     for (int i = 0; i < m_addFryCards.Length; i++)
                     {
                         m_players[m_dealer.currentFryPlayerId].playerInfo.cardInHand.Remove(m_addFryCards[i]);
+
                     }
                     // 客户端会自行将亮牌从手牌中去除，不用从服务器发送过去了
                     // 更新炒底的筹码下界
@@ -296,6 +310,18 @@ namespace server_0._0._1
         {
             Judgement judgement;
             bool isOk;
+
+            // 检查当前亮牌玩家是否需要提示
+            bool isNeedTips = (bool)ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, "收到");
+            // 如果玩家需要亮牌提示
+            if (isNeedTips)
+            {
+                // 从荷官处获取亮牌提示
+                Card[] buryCardTips = m_dealer.AutoBuryCard(m_dealer.currentFryPlayerId);
+                // 将亮牌提示返回到客户端
+                ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, Card.ToInt(buryCardTips));
+            }
+
             // 接收当前炒底玩家要埋的底牌
             m_buryCards = Card.ToCard((int[])ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, "收到出牌"));
             // 如果玩家有埋底

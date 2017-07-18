@@ -21,7 +21,7 @@ namespace GameUtility
             get { return m_bottom; }
             set { m_bottom = value; }
         }
-
+        // 4 个玩家的手牌暂存地（发牌阶段用）
         public Card[] playerCard
         {
             get { return m_playerCard; }
@@ -353,6 +353,28 @@ namespace GameUtility
             firstHomePlayerId = 0;
         }
 
+        // 炒底阶段，帮指定玩家代理亮牌
+        public Card[] AutoAddShowCard(int playerId)
+        {
+            // 随意选择合法的亮牌
+            // 测试：牌数比最低筹码大即为合法亮牌
+            int n = fryCardLowerBound + 1-showCards[playerId].Count;
+            Card[] addShowCards = new Card[n];
+            // 从手牌中选取
+            Array.Copy(playersHandCard[playerId].ToArray(), addShowCards, n);
+            return addShowCards;
+        }
+        // 炒底阶段，帮指定玩家代理埋底
+        // 测试：埋 8 张牌就是合法的
+        public Card[] AutoBuryCard(int playerId)
+        {
+            // 随意选择合法的埋牌
+            Card[] buryCards = new Card[bottomCardNumber];
+            // 从手牌中选取
+            Array.Copy(playersHandCard[playerId].ToArray(), buryCards, bottomCardNumber);
+            return buryCards;
+        }
+
         // 对战阶段，帮指定玩家代理出牌
         public Card[] AutoHandOut(int playerId)
         {
@@ -370,6 +392,7 @@ namespace GameUtility
             }
             return handOutCards;
         }
+
     }
 
 }
