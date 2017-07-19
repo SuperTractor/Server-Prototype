@@ -54,7 +54,6 @@ namespace GameUtility
         // 抢到底牌的玩家 ID
         public int gotBottomPlayerId { get; set; }
 
-
         // 当前炒底玩家
         private int m_currentFryPlayerId;
         public int currentFryPlayerId
@@ -188,7 +187,6 @@ namespace GameUtility
             }
             return new Judgement(message, isValid);
         }
-
 
         // 判断埋底的合法性（炒底阶段）
         // 测试：只要埋下的牌数等于 8 就算合法

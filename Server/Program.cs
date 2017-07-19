@@ -51,6 +51,10 @@ namespace server_0._0._1
         static Card[] m_buryCards;
         // 炒底阶段，玩家是否跟牌
         static bool m_isFollow;
+        // 亮牌的计时器
+        static Stopwatch m_showCardStopwatch;
+        // 埋底的计时器
+        static Stopwatch m_buryCardStopwatch;
 
         // 用于实现最后一个出牌后延迟清空牌桌的计时器
         static Stopwatch m_clearPlayCardStopwatch;
@@ -90,6 +94,10 @@ namespace server_0._0._1
             m_gameStateMachine.Update(GameStateMachine.State.Deal);
             // 新建摸牌效果辅助计时器
             m_touchCardStopwatch = new Stopwatch();
+            // 新建炒底阶段亮牌计时器
+            m_showCardStopwatch = new Stopwatch();
+            // 新建炒底阶段埋底计时器
+            m_buryCardStopwatch = new Stopwatch();
             // 新建延迟清理桌面计时器
             m_clearPlayCardStopwatch = new Stopwatch();
             // 新建出牌计时器
@@ -210,6 +218,8 @@ namespace server_0._0._1
             m_dealer.currentFryPlayerId = m_dealer.gotBottomPlayerId;
             // 清空荷官存储的炒底阶段亮牌
             m_dealer.ClearShowCards();
+            // 重启炒底阶段亮牌计时器
+            m_showCardStopwatch.Restart();
         }
 
         // 处理炒底流程
@@ -222,21 +232,38 @@ namespace server_0._0._1
             Judgement judgement;
             // 亮牌阶段是否结束
             bool isOk;
-            // 客户端是否要接收当前炒底玩家的亮牌
 
-            // 向所有玩家发送当前炒底玩家 ID
+            // 当前玩家是否已经超时
+            bool isTimeOut = m_showCardStopwatch.ElapsedMilliseconds > m_showCardDelay;
+
             for (int j = 0; j < Dealer.playerNumber; j++)
             {
+                // 向所有玩家发送当前炒底玩家 ID
                 ComServer.Respond(m_players[j].socket, m_dealer.currentFryPlayerId);
+                // 发送当前炒底玩家剩余思考时间
+                ComServer.Respond(m_players[j].socket, (m_showCardDelay - (int)m_showCardStopwatch.ElapsedMilliseconds)/1000);
+            }
+            // 告知当前炒底玩家是否超时
+            ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, isTimeOut);
+
+            // 如果超时了
+            if (isTimeOut)
+            {
+                // 认为玩家不跟
+                m_isFollow = false;
+            }
+            else
+            {
+                // 询问客户端玩家是否选择不跟
+                m_isFollow = (bool)ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, "收到");
             }
 
-            // 询问客户端玩家是否选择不跟
-            m_isFollow = (bool)ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, "收到");
             // 如果玩家选择跟牌
             if (m_isFollow)
             {
                 // 检查当前亮牌玩家是否需要提示
                 bool isNeedTips = (bool)ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, "收到");
+                // 检查当前炒底玩家是否开启代理
                 bool isAutoPlay = (bool)ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, "收到");
 
                 // 如果玩家需要亮牌提示
@@ -344,6 +371,8 @@ namespace server_0._0._1
                 // 增加不跟的玩家数
                 m_dealer.skipFryCount++;
             }
+            // 启动埋底计时器
+            m_buryCardStopwatch.Restart();
         }
 
         // 处理炒底阶段埋底流程
@@ -353,27 +382,38 @@ namespace server_0._0._1
             Judgement judgement;
             bool isOk;
 
+            // 当前玩家是否已经超时
+            bool isTimeOut = m_buryCardStopwatch.ElapsedMilliseconds > m_buryBottomDelay;
+
+            for (int j = 0; j < Dealer.playerNumber; j++)
+            {
+                // 发送当前炒底玩家剩余思考时间
+                ComServer.Respond(m_players[j].socket, (m_buryBottomDelay - (int)m_buryCardStopwatch.ElapsedMilliseconds)/1000);
+            }
+            // 告知当前炒底玩家是否超时
+            ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, isTimeOut);
+
             // 检查当前亮牌玩家是否需要提示
             bool isNeedTips = (bool)ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, "收到");
             // 检查是否开启代理
             bool isAutoPlay = (bool)ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, "收到");
 
-            // 如果玩家需要埋底提示
-            if (isNeedTips)
+            // 如果玩家需要埋底提示，或者开启代理，或者已经超时
+            if (isNeedTips || isAutoPlay || isTimeOut)
             {
                 // 从荷官处获取亮牌提示
                 Card[] buryCardTips = m_dealer.AutoBuryCard(m_dealer.currentFryPlayerId);
                 // 将亮牌提示返回到客户端
                 ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, Card.ToInt(buryCardTips));
             }
-            // 如果玩家开启代理
-            if (isAutoPlay)
-            {
-                // 从荷官处获取亮牌提示
-                Card[] buryCardTips = m_dealer.AutoBuryCard(m_dealer.currentFryPlayerId);
-                // 将亮牌提示返回到客户端
-                ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, Card.ToInt(buryCardTips));
-            }
+            //// 如果玩家开启代理
+            //if (isAutoPlay)
+            //{
+            //    // 从荷官处获取亮牌提示
+            //    Card[] buryCardTips = m_dealer.AutoBuryCard(m_dealer.currentFryPlayerId);
+            //    // 将亮牌提示返回到客户端
+            //    ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, Card.ToInt(buryCardTips));
+            //}
 
             // 接收当前炒底玩家要埋的底牌
             m_buryCards = Card.ToCard((int[])ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, "收到出牌"));
@@ -415,6 +455,8 @@ namespace server_0._0._1
         {
             // 设置下一玩家亮牌
             m_dealer.currentFryPlayerId++;
+            // 重启亮牌计时器
+            m_showCardStopwatch.Restart();
         }
 
         static void Fry2Fight()
@@ -466,8 +508,20 @@ namespace server_0._0._1
                     ComServer.Respond(m_players[j].socket, isTimeOut);
 
                 }
+                // 检查当前亮牌玩家是否需要提示
+                bool isNeedTips = (bool)ComServer.Respond(m_players[m_dealer.currentPlayerId].socket, "收到");
                 // 玩家是否开启代理
                 bool isAutoPlay = (bool)ComServer.Respond(m_players[m_dealer.currentPlayerId].socket, "收到");
+
+                // 如果玩家需要亮牌提示
+                if (isNeedTips)
+                {
+                    // 从荷官处获取亮牌提示
+                    Card[] dealCardTips = m_dealer.AutoHandOut(m_dealer.currentPlayerId);
+                    // 将亮牌提示返回到客户端
+                    ComServer.Respond(m_players[m_dealer.currentPlayerId].socket, Card.ToInt(dealCardTips));
+                }
+
                 // 如果玩家选择代理
                 if (isAutoPlay)
                 {
@@ -732,7 +786,7 @@ namespace server_0._0._1
                             // 继续埋底
                             m_gameStateMachine.Update(GameStateMachine.Signal.DoneFryShow2Bury);
                         }
-                        else if(!m_dealer.FryEnd())// 否则，如果玩家没有跟牌，而且炒底阶段还没有结束
+                        else if (!m_dealer.FryEnd())// 否则，如果玩家没有跟牌，而且炒底阶段还没有结束
                         {
                             // 直接到下一玩家亮牌
                             m_gameStateMachine.Update(GameStateMachine.Signal.FryContinue);
@@ -746,12 +800,12 @@ namespace server_0._0._1
                         bool isOk = FryBury();
                         // 如果炒底阶段结束
                         //if (m_dealer.NoHigerFry())
-                        if (isOk&&m_dealer.FryEnd())
+                        if (isOk && m_dealer.FryEnd())
                         {
                             // 结束炒底流程
                             m_gameStateMachine.Update(GameStateMachine.Signal.FryEnd);
                         }
-                        else if(isOk)// 否则，如果完成埋底，继续亮牌
+                        else if (isOk)// 否则，如果完成埋底，继续亮牌
                         {
                             m_gameStateMachine.Update(GameStateMachine.Signal.FryContinue);
                         }
