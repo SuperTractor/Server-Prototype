@@ -241,7 +241,7 @@ namespace server_0._0._1
                 // 向所有玩家发送当前炒底玩家 ID
                 ComServer.Respond(m_players[j].socket, m_dealer.currentFryPlayerId);
                 // 发送当前炒底玩家剩余思考时间
-                ComServer.Respond(m_players[j].socket, (m_showCardDelay - (int)m_showCardStopwatch.ElapsedMilliseconds)/1000);
+                ComServer.Respond(m_players[j].socket, (m_showCardDelay - (int)m_showCardStopwatch.ElapsedMilliseconds) / 1000);
             }
             // 告知当前炒底玩家是否超时
             ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, isTimeOut);
@@ -388,7 +388,7 @@ namespace server_0._0._1
             for (int j = 0; j < Dealer.playerNumber; j++)
             {
                 // 发送当前炒底玩家剩余思考时间
-                ComServer.Respond(m_players[j].socket, (m_buryBottomDelay - (int)m_buryCardStopwatch.ElapsedMilliseconds)/1000);
+                ComServer.Respond(m_players[j].socket, (m_buryBottomDelay - (int)m_buryCardStopwatch.ElapsedMilliseconds) / 1000);
             }
             // 告知当前炒底玩家是否超时
             ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, isTimeOut);
@@ -467,6 +467,18 @@ namespace server_0._0._1
             m_dealer.circle = 1;
             // 标志可以开始计时
             m_isOkCountDown = true;
+            for (int j = 0; j < Dealer.playerNumber; j++)
+            {
+                // 将炒底的亮牌重新放到玩家的手牌里去
+                m_players[j].playerInfo.cardInHand.AddRange(m_dealer.showCards[j]);
+                // 向玩家发送手牌
+                ComServer.Respond(m_players[j].socket, Card.ToInt(m_players[j].playerInfo.cardInHand.ToArray()));
+            }
+            // 清空亮牌
+            for (int j = 0; j < Dealer.playerNumber; j++)
+            {
+                m_dealer.showCards[j].Clear();
+            }
         }
 
         static void Fight()
@@ -562,7 +574,6 @@ namespace server_0._0._1
                         // 先把合法性判断返回客户端
                         // 一定要保证 Receive 和 Send 操作之间, 没有其他网络通信
                         ComServer.Respond(m_players[m_dealer.currentPlayerId].socket, judgement);
-
                     }
 
                     // 如果出牌合法

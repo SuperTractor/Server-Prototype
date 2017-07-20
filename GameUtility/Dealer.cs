@@ -377,18 +377,25 @@ namespace GameUtility
         public Card[] AutoHandOut(int playerId)
         {
             Card[] handOutCards;
-            // 测试：选择指定长度的牌
-            if (dealRequiredLength <= 0)
+            if (playersHandCard[playerId].Count > 0)
             {
-                handOutCards = new Card[1];
-                Array.Copy(playersHandCard[playerId].ToArray(), handOutCards, 1);
+                // 测试：选择指定长度的牌
+                if (dealRequiredLength <= 0)
+                {
+                    handOutCards = new Card[1];
+                    Array.Copy(playersHandCard[playerId].ToArray(), handOutCards, 1);
+                }
+                else
+                {
+                    handOutCards = new Card[dealRequiredLength];
+                    Array.Copy(playersHandCard[playerId].ToArray(), handOutCards, dealRequiredLength);
+                }
+                return handOutCards;
             }
             else
             {
-                handOutCards = new Card[dealRequiredLength];
-                Array.Copy(playersHandCard[playerId].ToArray(), handOutCards, dealRequiredLength);
+                return new Card[0];
             }
-            return handOutCards;
         }
 
     }
