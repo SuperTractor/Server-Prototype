@@ -12,7 +12,7 @@ namespace GameUtility
         public enum Suit { Diamond, Spade, Club, Heart, Joker0, Joker1 };
         // 花色
         public Suit suit { get; set; }
-        // 点数
+        // 点数：从 0 到 12 一共 13 点
         public int points { get; set; }
         // 一副牌的牌数
         public const int cardNumberOfOnePack = 54;
@@ -37,8 +37,8 @@ namespace GameUtility
                 }
             }
             // 大小王
-            card_set[52] = new Card(Suit.Joker0, 0);
-            card_set[53] = new Card(Suit.Joker1, 0);
+            card_set[52] = new Card(Suit.Joker0, 13);
+            card_set[53] = new Card(Suit.Joker1, 13);
             return card_set;
         }
 
@@ -107,11 +107,11 @@ namespace GameUtility
                     }
                     else if (i == 52)
                     {
-                        cards[count] = new Card(Suit.Joker0, 0);
+                        cards[count] = new Card(Suit.Joker0, 13);
                     }
                     else
                     {
-                        cards[count] = new Card(Suit.Joker1, 0);
+                        cards[count] = new Card(Suit.Joker1, 13);
                     }
                     count++;
                 }

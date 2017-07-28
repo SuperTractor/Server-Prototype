@@ -13,8 +13,12 @@ namespace GameUtility
         private Card[] m_bottom;
         // 分发给玩家的手牌
         private Card[] m_playerCard;
-
+        // 玩家当前的手牌
         public List<Card>[] playersHandCard { get; set; }
+
+        // 玩家的级数，由服务器主程序同步进来
+        public int[] playerLevels { get; set; }
+
         // 底牌接口
         public Card[] bottom
         {
@@ -51,6 +55,11 @@ namespace GameUtility
         // 每个玩家手牌的最大数目
         public const int cardInHandMaxNumber = cardInHandInitialNumber + bottomCardNumber;
 
+        // 抢底阶段，当前所有玩家的亮牌
+        public List<Card>[] currentBidCards;
+        // 每个玩家当前的合法亮牌花色
+        //public List<Card.Suit>[] currentLegalBidColors;
+
         // 抢到底牌的玩家 ID
         public int gotBottomPlayerId { get; set; }
 
@@ -75,7 +84,13 @@ namespace GameUtility
         public int skipFryCount { get; set; }
         // 目前各玩家亮出的筹码牌
         public List<Card>[] showCards;
+        // 庄家的 id
+        public List<int> bankerPlayerId;
 
+        // 庄家是否单打
+        public bool bankerIsFightAlone;
+        // 信号牌
+        public Card signCard;
 
         // 这一轮已经出牌的玩家个数
         private int m_handOutPlayerCount;
@@ -122,9 +137,12 @@ namespace GameUtility
             m_playerCard = new Card[cardInHandInitialNumber * 4];
             m_bottom = new Card[bottomCardNumber];
 
+            playerLevels = new int[playerNumber];
+
             playersHandCard = new List<Card>[playerNumber];
 
-
+            currentBidCards = new List<Card>[playerNumber];
+            //currentLegalBidColors = new List<Card.Suit>[playerNumber];
             //Shuffle();
             //Cut();
             // 为炒底阶段玩家亮牌分配内存
@@ -137,7 +155,9 @@ namespace GameUtility
                 playersHandCard[i] = new List<Card>();
                 showCards[i] = new List<Card>();
                 handOutCards[i] = new List<Card>();
+                currentBidCards[i] = new List<Card>();
             }
+            bankerPlayerId = new List<int>();
         }
         // 洗牌
         public void Shuffle()
@@ -168,6 +188,102 @@ namespace GameUtility
         {
             Array.Copy(m_totalCard, bottomCardNumber, m_playerCard, 0, cardInHandInitialNumber * 4);
             Array.Copy(m_totalCard, m_bottom, bottomCardNumber);
+        }
+
+        // 抢底阶段：给出此玩家当前可以亮的花色，已知当前摸牌的数目
+        public bool[] GetLegalBidColors(int playerId/*, int touchCardNumber*/)
+        {
+            bool[] legalBidColors = new bool[4];
+            // 构造当前该玩家已经摸到的牌
+            //Card[] currentTouchCards = new Card[touchCardNumber];
+            //playersHandCard[playerId].CopyTo(0, currentTouchCards, 0, touchCardNumber);
+            // 检查该玩家是否为台上方玩家
+            bool isUpperPlayer = Array.IndexOf(m_upperPlayersId, playerId) >= 0;
+            // 只有台上方玩家才能抢底
+            if (isUpperPlayer)
+            {
+                List<Card> levelCards;
+                // 如果该玩家还没有亮牌
+                if (currentBidCards[playerId].Count == 0)
+                {
+                    // 获取目前该玩家的摸牌当中，所有的级牌
+                    levelCards = playersHandCard[playerId].FindAll(card => card.points + 1 == playerLevels[playerId]);
+
+                    for (int i = 0; i < levelCards.Count; i++)
+                    {
+                        // 姑且认为可以亮出此花色的牌
+                        int k = (int)levelCards[i].suit;
+                        if (!legalBidColors[k])
+                        {
+                            legalBidColors[k] = true;
+                        }
+                    }
+                }
+                else// 如果该玩家已经亮了牌
+                {
+                    // 获取该玩家目前所有的级牌，而且花色要和他已经亮过的牌一致
+                    levelCards = playersHandCard[playerId].FindAll(card => card.points + 1 == playerLevels[playerId] && card.suit == currentBidCards[playerId][0].suit);
+
+                    // 姑且认为可以亮出此花色的牌
+                    if (levelCards.Count > 0)
+                    {
+                        int k = (int)levelCards[0].suit;
+                        if (!legalBidColors[k])
+                        {
+                            legalBidColors[k] = true;
+                        }
+                    }
+                }
+                // 根据其他玩家已经亮的牌决定此玩家可以亮的花色
+                for (int i = 0; i < legalBidColors.Length; i++)
+                {
+                    // 如果先前认定这花色可以出
+                    if (legalBidColors[i])
+                    {
+                        // 计算这花色的摸牌，加上已经亮的牌，总共多少张
+                        // 只有当总数大于当前亮牌数最大的玩家，才可以出这个花色的牌
+                        int totalNum = levelCards.Count(card => card.suit == (Card.Suit)i) + currentBidCards[playerId].Count;
+                        legalBidColors[i] = totalNum > currentBidCards.Max(cards => cards.Count);
+                    }
+                }
+            }
+            else
+            {
+            }
+            return legalBidColors;
+        }
+        // 亮牌需要增加的数目
+        //public int BidNeedNumber(int playerId)
+        //{
+        //    return currentBidCards.Max(cards => cards.Count) + 1 - currentBidCards[playerId].Count;
+        //}
+        // 抢底阶段：亮牌帮助函数
+        public void BidHelper(int playerId, int currentTouchNumber, Card.Suit suit)
+        {
+            int bidNeedNumber = currentBidCards.Max(cards => cards.Count) + 1 - currentBidCards[playerId].Count;
+            // 构造一张级牌
+            Card levelCard = new Card(suit, playerLevels[playerId] - 1);
+            for (int i = 0; i < bidNeedNumber; i++)
+            {
+                // 找到级牌所在位置
+                //int idx = playersHandCard[playerId].FindIndex(card => card.suit == suit && card.points + 1 == playerLevels[playerId]);
+                // 去除一张级牌
+                if (!playersHandCard[playerId].Remove(levelCard))
+                {
+                    Console.WriteLine("抢底：判断级牌数是否足够，出错");
+                }
+                // 加入亮牌当中
+                currentBidCards[playerId].Add(levelCard);
+            }
+            // 更新当前抢到底牌的玩家 ID
+            gotBottomPlayerId = playerId;
+        }
+
+        // 生成信号牌
+        public void GenerateSignCard()
+        {
+            // 测试：我先随便编一个
+            signCard = new Card(Card.Suit.Club, 0);
         }
 
         // 判断炒底时增加的筹码牌是否合法
@@ -233,7 +349,6 @@ namespace GameUtility
             return new Judgement(message, isValid);
         }
 
-
         public void SetCurrentPlayerId(int id)
         {
             m_currentPlayerId = id;
@@ -254,7 +369,6 @@ namespace GameUtility
                 handOutCards[i].Clear();
             }
         }
-
 
         // TODO：
         //public void IncrementCurrentPlayerId()
@@ -294,7 +408,17 @@ namespace GameUtility
         // 判断是否不可能有更高出价者(抢底阶段)
         public bool NoHigherBid()
         {
-            return false;
+            bool hasHigerBid = false;
+            for (int i = 0; i < playerNumber; i++)
+            {
+                bool[] legalBidColors = GetLegalBidColors(i);
+                for (int j = 0; j < legalBidColors.Length; j++)
+                {
+                    hasHigerBid |= legalBidColors[j];
+                }
+            }
+            // 当没有更高筹码，或者只有一个台上方玩家时，认为不需要再进行抢底
+            return !hasHigerBid || upperPlayersId.Length == 1;
         }
 
         // 炒底阶段：判断是否不可能有更高筹码者
@@ -356,7 +480,7 @@ namespace GameUtility
         {
             // 随意选择合法的亮牌
             // 测试：牌数比最低筹码大即为合法亮牌
-            int n = fryCardLowerBound + 1-showCards[playerId].Count;
+            int n = fryCardLowerBound + 1 - showCards[playerId].Count;
             Card[] addShowCards = new Card[n];
             // 从手牌中选取
             Array.Copy(playersHandCard[playerId].ToArray(), addShowCards, n);

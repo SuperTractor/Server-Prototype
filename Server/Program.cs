@@ -34,12 +34,23 @@ namespace server_0._0._1
         // 游戏状态机
         static GameStateMachine m_gameStateMachine;
 
+        // 用于辅助模拟摸牌效果，暂且放置手牌
+        static List<Card>[] m_tempHandCards;
+
         // 当前应该显示牌数
         static int m_handCardShowNumber;
         // 抢底阶段显示手牌的延迟(毫秒)
         static int m_touchCardDelay = 10;
         // 用于辅助模拟摸牌效果的计时器
         static Stopwatch m_touchCardStopwatch;
+        // 用于最后抢底阶段的计时器
+        static Stopwatch m_lastBidStopwatch;
+        // 最后抢底阶段有的思考时间（毫秒）
+        static int m_lastBidDelay = 5000;
+        // 抢底阶段：庄家埋底思考时间
+        static int m_bidBuryBottomDelay = 30000;
+        // 庄家埋底计时器
+        static Stopwatch m_bidBuryStopwatch;
 
         // 炒底新增亮牌数组
         static Card[] m_addFryCards;
@@ -55,6 +66,15 @@ namespace server_0._0._1
         static Stopwatch m_showCardStopwatch;
         // 埋底的计时器
         static Stopwatch m_buryCardStopwatch;
+
+        // 寻友阶段计时器
+        static Stopwatch m_findFriendStopwatch;
+        // 寻友阶段庄家思考时间（毫秒）
+        static int m_findFriendDelay = 10000;
+        // 寻友结束后，如果庄家有找朋友，则停留几秒让所有玩家看清楚信号牌
+        static int m_findFriendLingerDelay = 2000;
+        // 停留计时器
+        static Stopwatch m_findFriendLingerStopwatch;
 
         // 用于实现最后一个出牌后延迟清空牌桌的计时器
         static Stopwatch m_clearPlayCardStopwatch;
@@ -102,6 +122,20 @@ namespace server_0._0._1
             m_clearPlayCardStopwatch = new Stopwatch();
             // 新建出牌计时器
             m_handOutStopwatch = new Stopwatch();
+            // 新建最后抢底阶段的计时器
+            m_lastBidStopwatch = new Stopwatch();
+            // 新建庄家埋底的计时器
+            m_bidBuryStopwatch = new Stopwatch();
+            // 新建庄家寻友计时器
+            m_findFriendStopwatch = new Stopwatch();
+            // 新建寻友计时器
+            m_findFriendLingerStopwatch = new Stopwatch();
+            // 新建暂存手牌数组
+            m_tempHandCards = new List<Card>[Dealer.playerNumber];
+            //for(int i = 0; i < Dealer.playerNumber; i++)
+            //{
+            //    m_tempHandCards[i] = new List<Card>();
+            //}
         }
         //接收一个连接并为其分配一个线程服务。
         static void WaitClient()
@@ -128,7 +162,6 @@ namespace server_0._0._1
 
                 m_players[m_playersCount++] = player;
 
-
                 Console.WriteLine(player.playerInfo.name + " 连接到服务器");
             }
             // 向所有玩家返回响应
@@ -149,59 +182,306 @@ namespace server_0._0._1
             {
                 // 给玩家分发手牌
                 Array.Copy(m_dealer.playerCard, i * Dealer.cardInHandInitialNumber, cards, 0, Dealer.cardInHandInitialNumber);
-                m_players[i].playerInfo.cardInHand = new List<Card>(cards);
-
+                //m_players[i].playerInfo.cardInHand = new List<Card>(cards);
+                m_tempHandCards[i] = new List<Card>(cards);
                 // 通过网络将手牌发送给客户端
                 // 用 int 数组格式发送
-                Console.WriteLine("向 " + m_players[i].playerInfo.name + " 发送手牌");
-                ComServer.Respond(m_players[i].socket, Card.ToInt(m_players[i].playerInfo.cardInHand));
+                //Console.WriteLine("向 " + m_players[i].playerInfo.name + " 发送手牌");
+                //ComServer.Respond(m_players[i].socket, Card.ToInt(m_players[i].playerInfo.cardInHand));
+            }
+            // 如果当前是首盘
+            if (m_dealer.round == 1)
+            {
+                // 设置所有玩家的级数为 1
+                for (int i = 0; i < Dealer.playerNumber; i++)
+                {
+                    m_players[i].playerInfo.level = 1;
+                }
             }
         }
 
         static void Deal2Bid()
         {
             // 开始计时
-            m_touchCardStopwatch.Start();
+            m_touchCardStopwatch.Restart();
 
-            // 向客户端发送当前台上方的数目
-            // 如果只有 1 个台上方, 则跳过摸牌效果; 否则, 才需要模拟摸牌
             for (int i = 0; i < Dealer.playerNumber; i++)
             {
+                // 向客户端发送当前台上方的 ID
+                // 如果只有 1 个台上方, 则跳过摸牌效果; 否则, 才需要模拟摸牌
                 ComServer.Respond(m_players[i].socket, m_dealer.upperPlayersId);
+                // 发送玩家当前的等级
+                ComServer.Respond(m_players[i].socket, m_players[i].playerInfo.level);
             }
             m_handCardShowNumber = 0;
+            for (int i = 0; i < m_dealer.currentBidCards.Length; i++)
+            {
+                m_dealer.currentBidCards[i].Clear();
+            }
         }
 
         // 处理抢底流程
         // 返回是否结束摸牌
-        static bool Bid()
+        static bool Touch()
         {
-            // 是否所有服务器都已经显示当前要显示的那一张牌，即它们是否已经跟上节奏
-            bool isFollowed = true;
+            // 如果台上方不止一个
+            if (m_dealer.upperPlayersId.Length > 1)
+            {
+                // 是否所有服务器都已经显示当前要显示的那一张牌，即它们是否已经跟上节奏
+                bool isFollowed = true;
 
-            // 向 4 个客户端发送当前应该显示的牌数
+                for (int i = 0; i < m_players.Length; i++)
+                {
+                    // 向 4 个客户端发送当前应该显示的牌数
+                    //ComServer.Respond(m_players[i].socket, m_handCardShowNumber);
+                    // 向 4 个客户端发送当前玩家的手牌
+                    ComServer.Respond(m_players[i].socket, Card.ToInt(m_players[i].playerInfo.cardInHand));
+
+                    // 检查客户端是否跟上步伐
+                    isFollowed &= (bool)ComServer.Respond(m_players[i].socket, "收到");
+                    // 向该玩家发送当前可以亮牌的花色
+                    ComServer.Respond(m_players[i].socket, m_dealer.GetLegalBidColors(i/*,m_handCardShowNumber*/));
+
+                    // 接收每个玩家的亮牌决定
+                    bool isClickClub = (bool)ComServer.Respond(m_players[i].socket, "收到");
+                    bool isClickDiamond = (bool)ComServer.Respond(m_players[i].socket, "收到");
+                    bool isClickHeart = (bool)ComServer.Respond(m_players[i].socket, "收到");
+                    bool isClickSpade = (bool)ComServer.Respond(m_players[i].socket, "收到");
+
+                    // 获取当前玩家需要增加的亮牌数
+                    //int bidNeedNumber = m_dealer.BidNeedNumber(i);
+                    // 根据现在的情况，更新该玩家的亮牌和手牌
+                    if (isClickClub)
+                    {
+                        m_dealer.BidHelper(i, m_handCardShowNumber, Card.Suit.Club);
+                    }
+                    else if (isClickDiamond)
+                    {
+                        m_dealer.BidHelper(i, m_handCardShowNumber, Card.Suit.Diamond);
+                    }
+                    else if (isClickHeart)
+                    {
+                        m_dealer.BidHelper(i, m_handCardShowNumber, Card.Suit.Heart);
+                    }
+                    else if (isClickSpade)
+                    {
+                        m_dealer.BidHelper(i, m_handCardShowNumber, Card.Suit.Spade);
+                    }
+                    else// 如果玩家还没有决定亮牌
+                    {
+
+                    }
+                    // 更新玩家的手牌
+                    m_players[i].playerInfo.cardInHand = m_dealer.playersHandCard[i];
+                    // 将该玩家的手牌发送到客户端
+                    ComServer.Respond(m_players[i].socket, Card.ToInt(m_players[i].playerInfo.cardInHand));
+                }
+                for (int i = 0; i < m_players.Length; i++)
+                {
+                    // 将当前亮牌玩家的 ID 和亮牌发送到所有玩家
+                    for (int j = 0; j < m_dealer.currentBidCards.Length; j++)
+                    {
+                        ComServer.Respond(m_players[i].socket, j);
+                        ComServer.Respond(m_players[i].socket, Card.ToInt(m_dealer.currentBidCards[j]));
+                    }
+                }
+
+
+                // 获取当前应该显示的手牌数
+                //int handCardShowNumber = (int)m_touchCardStopwatch.ElapsedMilliseconds / m_touchCardDelay;
+                // 如果计时器显示已经超过显示手牌延时，而且所有客户端都表示已经跟上步伐
+
+                if (m_touchCardStopwatch.ElapsedMilliseconds > m_touchCardDelay && isFollowed)
+                {
+                    for (int i = 0; i < m_players.Length; i++)
+                    {
+                        // 准备显示下一张牌
+                        m_players[i].playerInfo.cardInHand.Add(m_tempHandCards[i][0]);
+                        m_tempHandCards[i].RemoveAt(0);
+                    }
+                    //m_handCardShowNumber++;
+                    // 重启计时器
+                    //m_touchCardStopwatch.Reset();
+                    //m_touchCardStopwatch.Start();
+                    m_touchCardStopwatch.Restart();
+                }
+            }
+            else// 如果台上方只有一个
+            {
+                // 直接把手牌发送到各个玩家
+                for (int i = 0; i < m_players.Length; i++)
+                {
+                    m_players[i].playerInfo.cardInHand = m_tempHandCards[i];
+                    // 将该玩家的手牌发送到客户端
+                    ComServer.Respond(m_players[i].socket, Card.ToInt(m_players[i].playerInfo.cardInHand));
+                }
+                // 并指定是此台上方玩家抢到底牌
+                m_dealer.gotBottomPlayerId = m_dealer.upperPlayersId[0];
+            }
+
+            //// 如果摸牌数达到手牌数, 说明摸牌已经结束
+            //return m_handCardShowNumber >= Dealer.cardInHandInitialNumber;
+            // 如果暂存手牌数组均为空，则说明摸牌已经结束
+            bool isOk = true;
+            for (int i = 0; i < m_tempHandCards.Length; i++)
+            {
+                isOk &= m_tempHandCards[i].Count == 0;
+            }
+            return isOk;
+        }
+
+        // 处理摸牌到最后抢底过渡阶段
+        static void Touch2LastBid()
+        {
+            // 重新开始计时
+            m_lastBidStopwatch.Restart();
+        }
+
+        // 处理最后抢底阶段
+        // 返回是否超时
+        static bool LastBid()
+        {
             for (int i = 0; i < m_players.Length; i++)
             {
-                ComServer.Respond(m_players[i].socket, m_handCardShowNumber);
-                isFollowed &= (bool)ComServer.Respond(m_players[i].socket, "收到");
+                // 向 4 个客户端发送当前的剩余时间（秒）
+                ComServer.Respond(m_players[i].socket, (m_lastBidDelay - (int)m_lastBidStopwatch.ElapsedMilliseconds) / 1000);
+                // 向 4 个客户端发送当前玩家的手牌
+                ComServer.Respond(m_players[i].socket, Card.ToInt(m_players[i].playerInfo.cardInHand));
+
+                // 向该玩家发送当前可以亮牌的花色
+                ComServer.Respond(m_players[i].socket, m_dealer.GetLegalBidColors(i/*,m_handCardShowNumber*/));
+
+                // 接收每个玩家的亮牌决定
+                bool isClickClub = (bool)ComServer.Respond(m_players[i].socket, "收到");
+                bool isClickDiamond = (bool)ComServer.Respond(m_players[i].socket, "收到");
+                bool isClickHeart = (bool)ComServer.Respond(m_players[i].socket, "收到");
+                bool isClickSpade = (bool)ComServer.Respond(m_players[i].socket, "收到");
+
+                // 根据现在的情况，更新该玩家的亮牌和手牌
+                if (isClickClub)
+                {
+                    m_dealer.BidHelper(i, m_handCardShowNumber, Card.Suit.Club);
+                }
+                else if (isClickDiamond)
+                {
+                    m_dealer.BidHelper(i, m_handCardShowNumber, Card.Suit.Diamond);
+                }
+                else if (isClickHeart)
+                {
+                    m_dealer.BidHelper(i, m_handCardShowNumber, Card.Suit.Heart);
+                }
+                else if (isClickSpade)
+                {
+                    m_dealer.BidHelper(i, m_handCardShowNumber, Card.Suit.Spade);
+                }
+                else// 如果玩家还没有决定亮牌
+                {
+
+                }
+                // 更新玩家的手牌
+                m_players[i].playerInfo.cardInHand = m_dealer.playersHandCard[i];
+                // 将该玩家的手牌发送到客户端
+                ComServer.Respond(m_players[i].socket, Card.ToInt(m_players[i].playerInfo.cardInHand));
             }
-
-            // 获取当前应该显示的手牌数
-            //int handCardShowNumber = (int)m_touchCardStopwatch.ElapsedMilliseconds / m_touchCardDelay;
-            // 如果计时器显示已经超过显示手牌延时，而且所有客户端都表示已经跟上步伐
-
-            if (m_touchCardStopwatch.ElapsedMilliseconds > m_touchCardDelay && isFollowed)
+            for (int i = 0; i < m_players.Length; i++)
             {
-                // 准备显示下一张牌
-                m_handCardShowNumber++;
-                // 重启计时器
-                //m_touchCardStopwatch.Reset();
-                //m_touchCardStopwatch.Start();
-                m_touchCardStopwatch.Restart();
+                // 将当前亮牌玩家的 ID 和亮牌发送到所有玩家
+                for (int j = 0; j < m_dealer.currentBidCards.Length; j++)
+                {
+                    ComServer.Respond(m_players[i].socket, j);
+                    ComServer.Respond(m_players[i].socket, Card.ToInt(m_dealer.currentBidCards[j]));
+                }
+            }
+            return m_lastBidDelay < m_lastBidStopwatch.ElapsedMilliseconds;
+        }
+
+        // 处理最后抢底到埋底的过渡阶段
+        static void LastBid2BidBury()
+        {
+            // 在最后摸牌结束后，将玩家的亮牌重新放回到手牌当中
+            for (int i = 0; i < m_players.Length; i++)
+            {
+                m_players[i].playerInfo.cardInHand.AddRange(m_dealer.currentBidCards[i]);
+                // 将手牌发送到客户端
+                // 向 4 个客户端发送当前玩家的手牌
+                ComServer.Respond(m_players[i].socket, Card.ToInt(m_players[i].playerInfo.cardInHand));
+                // 将庄家 ID 发送给所有玩家
+                ComServer.Respond(m_players[i].socket, m_dealer.gotBottomPlayerId);
+
+            }
+            // 将底牌发给庄家
+            ComServer.Respond(m_players[m_dealer.gotBottomPlayerId].socket, Card.ToInt(m_dealer.bottom));
+
+            // 并将底牌加入到庄家手牌
+            m_players[m_dealer.gotBottomPlayerId].playerInfo.cardInHand.AddRange(m_dealer.bottom);
+
+            // 启动埋底计时器
+            m_bidBuryStopwatch.Restart();
+        }
+
+        // 抢底阶段：处理庄家埋底
+        static bool BidBury()
+        {
+            Judgement judgement;
+            bool isOk;
+
+            bool isTimeOut = m_bidBuryStopwatch.ElapsedMilliseconds > m_bidBuryBottomDelay;
+
+            for (int i = 0; i < m_players.Length; i++)
+            {
+                // 发送庄家剩余时间
+                ComServer.Respond(m_players[i].socket, (m_bidBuryBottomDelay - (int)m_bidBuryStopwatch.ElapsedMilliseconds) / 1000);
+            }
+            // 告知当前炒底玩家是否超时
+            ComServer.Respond(m_players[m_dealer.gotBottomPlayerId].socket, isTimeOut);
+
+            // 检查当前亮牌玩家是否需要提示
+            bool isNeedTips = (bool)ComServer.Respond(m_players[m_dealer.gotBottomPlayerId].socket, "收到");
+            // 检查是否开启代理
+            bool isAutoPlay = (bool)ComServer.Respond(m_players[m_dealer.gotBottomPlayerId].socket, "收到");
+
+            // 如果玩家需要埋底提示，或者开启代理，或者已经超时
+            if (isNeedTips || isAutoPlay || isTimeOut)
+            {
+                // 从荷官处获取亮牌提示
+                Card[] buryCardTips = m_dealer.AutoBuryCard(m_dealer.gotBottomPlayerId);
+                // 将亮牌提示返回到客户端
+                ComServer.Respond(m_players[m_dealer.gotBottomPlayerId].socket, Card.ToInt(buryCardTips));
             }
 
-            // 如果摸牌数达到手牌数, 说明摸牌已经结束
-            return m_handCardShowNumber >= Dealer.cardInHandInitialNumber;
+            // 接收当前炒底玩家要埋的底牌
+            m_buryCards = Card.ToCard((int[])ComServer.Respond(m_players[m_dealer.gotBottomPlayerId].socket, "收到出牌"));
+            // 如果玩家有埋底
+            if (m_buryCards.Length > 0)
+            {
+                Console.WriteLine("玩家 id=" + m_dealer.gotBottomPlayerId + "正在埋牌");
+                // 检验埋底的合法性
+                judgement = m_dealer.IsLegalBury(m_buryCards);
+                // 向客户端发送埋底合法性
+                ComServer.Respond(m_players[m_dealer.gotBottomPlayerId].socket, judgement);
+                // 如果玩家所埋的牌合法
+                if (judgement.isValid)
+                {
+                    // 将埋牌从玩家手牌中去除
+                    for (int i = 0; i < m_buryCards.Length; i++)
+                    {
+                        m_players[m_dealer.gotBottomPlayerId].playerInfo.cardInHand.Remove(m_buryCards[i]);
+                    }
+                    // 将埋牌放到底牌
+                    m_dealer.bottom = m_buryCards;
+                }
+                else// 如果玩家埋的牌不合法
+                {
+
+                }
+            }
+            else// 如果玩家还没有埋底
+            {
+                judgement = new Judgement("", false);
+            }
+            // 只有当玩家埋了底，而且是合法的，埋底这一步才算结束
+            isOk = judgement.isValid && m_buryCards.Length > 0;
+            return isOk;
         }
 
         static void Bid2Fry()
@@ -213,13 +493,23 @@ namespace server_0._0._1
             m_handCardShowNumber = 0;
             // 重置炒底亮牌数下界
             m_dealer.fryCardLowerBound = 0;
-            // 设置当前炒底玩家为抢到底牌的人
-            // 抢到底牌的玩家首先炒底
-            m_dealer.currentFryPlayerId = m_dealer.gotBottomPlayerId;
+            // 设置当前庄家的下一个玩家为第一个炒底的玩家
+            // 因为庄家已经买过底了
+            m_dealer.currentFryPlayerId = (m_dealer.gotBottomPlayerId + 1) % Dealer.playerNumber;
             // 清空荷官存储的炒底阶段亮牌
             m_dealer.ClearShowCards();
             // 重启炒底阶段亮牌计时器
             m_showCardStopwatch.Restart();
+
+            // 设置庄家
+            m_dealer.bankerPlayerId.Clear();
+            m_dealer.bankerPlayerId.Add(m_dealer.gotBottomPlayerId);
+            // 将庄家 ID 发送到客户端
+            for (int i = 0; i < m_players.Length; i++)
+            {
+                // 发送庄家剩余时间
+                ComServer.Respond(m_players[i].socket, m_dealer.bankerPlayerId.ToArray());
+            }
         }
 
         // 处理炒底流程
@@ -406,15 +696,6 @@ namespace server_0._0._1
                 // 将亮牌提示返回到客户端
                 ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, Card.ToInt(buryCardTips));
             }
-            //// 如果玩家开启代理
-            //if (isAutoPlay)
-            //{
-            //    // 从荷官处获取亮牌提示
-            //    Card[] buryCardTips = m_dealer.AutoBuryCard(m_dealer.currentFryPlayerId);
-            //    // 将亮牌提示返回到客户端
-            //    ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, Card.ToInt(buryCardTips));
-            //}
-
             // 接收当前炒底玩家要埋的底牌
             m_buryCards = Card.ToCard((int[])ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, "收到出牌"));
             // 如果玩家有埋底
@@ -459,7 +740,104 @@ namespace server_0._0._1
             m_showCardStopwatch.Restart();
         }
 
-        static void Fry2Fight()
+        static void Fry2FindFriend()
+        {
+            // 重启寻友计时器
+            m_findFriendStopwatch.Restart();
+        }
+
+        static bool FindFriend()
+        {
+            // 是否完成寻友
+            bool isOk;
+            // 玩家是否已经超时
+            bool isTimeOut = m_findFriendStopwatch.ElapsedMilliseconds > m_findFriendDelay;
+            // 获取庄家 ID 
+            int bankerId = m_dealer.bankerPlayerId[0];
+            // 庄家是否有操作的标志
+            bool hasOperation = false;
+            // 向所有玩家
+            for (int j = 0; j < Dealer.playerNumber; j++)
+            {
+                // 发送庄家剩余思考时间
+                ComServer.Respond(m_players[j].socket, (m_findFriendDelay - (int)m_findFriendStopwatch.ElapsedMilliseconds) / 1000);
+            }
+            // 告知庄家是否超时
+            ComServer.Respond(m_players[bankerId].socket, isTimeOut);
+            // 如果已经超时了
+            if (isTimeOut)
+            {
+                // 认为庄家选择单打
+                m_dealer.bankerIsFightAlone = true;
+                m_dealer.signCard = null;
+                isOk = true;
+                hasOperation = false;
+            }
+            else
+            {
+                // 检查庄家是否选择寻友
+                bool isFindFriend = (bool)ComServer.Respond(m_players[bankerId].socket, "收到");
+
+                // 检查庄家是否选择单打
+                bool isAlone = (bool)ComServer.Respond(m_players[bankerId].socket, "收到");
+                
+                isOk = isAlone || isFindFriend;
+                hasOperation = isAlone || isFindFriend;
+                // 如果庄家决定单打
+                if (isAlone)
+                {
+                    m_dealer.bankerIsFightAlone = true;
+                    m_dealer.signCard = null;
+                }
+                // 如果庄家决定寻友
+                else if (isFindFriend)
+                {
+                    // 让荷官生成信号牌
+                    m_dealer.GenerateSignCard();
+                    m_dealer.bankerIsFightAlone = false;
+                }
+                // 如果庄家还没有操作
+                else
+                {
+                }
+            } 
+            // 告诉所有玩家，庄家是否有操作
+            for (int j = 0; j < Dealer.playerNumber; j++)
+            {
+                ComServer.Respond(m_players[j].socket, hasOperation);
+            }
+            if (hasOperation)
+            {
+                // 告诉所有玩家，庄家是否选择单打
+                for (int j = 0; j < Dealer.playerNumber; j++)
+                {
+                    ComServer.Respond(m_players[j].socket, m_dealer.bankerIsFightAlone);
+                }
+                // 如果庄家选择寻友
+                if (!m_dealer.bankerIsFightAlone)
+                {
+                    // 向所有玩家发送信号牌
+                    for (int j = 0; j < Dealer.playerNumber; j++)
+                    {
+                        ComServer.Respond(m_players[j].socket, m_dealer.signCard);
+                    }
+                }
+            }
+            return isOk;
+        }
+
+        static void FindFriend2Linger()
+        {
+            // 重启计时器
+            m_findFriendLingerStopwatch.Restart();
+        }
+
+        static bool FindFriendLinger()
+        {
+            return m_findFriendLingerStopwatch.ElapsedMilliseconds>m_findFriendLingerDelay;
+        }
+
+        static void FindFriend2Fight()
         {
             // 首次出牌对牌数没有限制
             m_dealer.dealRequiredLength = -1;
@@ -467,12 +845,13 @@ namespace server_0._0._1
             m_dealer.circle = 1;
             // 标志可以开始计时
             m_isOkCountDown = true;
+
             for (int j = 0; j < Dealer.playerNumber; j++)
             {
                 // 将炒底的亮牌重新放到玩家的手牌里去
                 m_players[j].playerInfo.cardInHand.AddRange(m_dealer.showCards[j]);
                 // 向玩家发送手牌
-                ComServer.Respond(m_players[j].socket, Card.ToInt(m_players[j].playerInfo.cardInHand.ToArray()));
+                ComServer.Respond(m_players[j].socket, Card.ToInt(m_players[j].playerInfo.cardInHand/*.ToArray()*/));
             }
             // 清空亮牌
             for (int j = 0; j < Dealer.playerNumber; j++)
@@ -697,10 +1076,12 @@ namespace server_0._0._1
         // 更新荷官需要掌握的信息
         static void UpdateDealer()
         {
-            // 更新荷官掌握的玩家手牌
-            for (int i = 0; i < m_dealer.playersHandCard.Length; i++)
+            for (int i = 0; i < Dealer.playerNumber; i++)
             {
+                // 更新荷官掌握的玩家手牌
                 m_dealer.playersHandCard[i] = m_players[i].playerInfo.cardInHand;
+                // 更新玩家的级数
+                m_dealer.playerLevels[i] = m_players[i].playerInfo.level;
             }
             // 更新台上方玩家
             m_dealer.UpdateUpperPlayers();
@@ -716,6 +1097,7 @@ namespace server_0._0._1
         // 游戏主循环
         static void GameLoop()
         {
+            bool isOk;
             while (true)
             {
                 // 向所有玩家发送最新的游戏状态
@@ -741,29 +1123,68 @@ namespace server_0._0._1
                         m_gameStateMachine.Update(GameStateMachine.Signal.DoneDeal2Bid);
                         Console.WriteLine("开始抢底");
                         break;
-                    case GameStateMachine.State.Bid:
-                        // 如果不可能有更高出价者
-                        if (m_dealer.NoHigherBid())
+                    //case GameStateMachine.State.Bid:
+                    case GameStateMachine.State.Touch:
+                        bool isOkTouch = Touch();
+                        bool noHigherBid = m_dealer.NoHigherBid();
+                        // 如果摸牌结束，而且已经不可能有人要亮牌
+                        if (isOkTouch && noHigherBid)
                         {
                             Console.WriteLine("不可能有更高出价者, 抢底结束");
                             m_gameStateMachine.Update(GameStateMachine.Signal.NoHigherBid);
-                            break;
                         }
-                        // 进行抢底
-                        // 如果摸牌结束
-                        if (Bid())
+                        // 如果摸牌结束，而且还有人可能要亮牌
+                        else if (isOkTouch && !noHigherBid)
                         {
-                            // 暂且直接进入炒底阶段
-                            m_gameStateMachine.Update(GameStateMachine.Signal.NoHigherBid);
-                            // 测试：设抢到底牌者是 id=0 者
-                            m_dealer.gotBottomPlayerId = 0;
+                            // 完成摸牌，准备进入最后抢底阶段
+                            m_gameStateMachine.Update(GameStateMachine.Signal.DoneTouch);
+                        }
+                        //// 如果不可能有更高出价者
+                        //if (m_dealer.NoHigherBid())
+                        //{
+                        //    // 完成摸牌
+                        //    m_gameStateMachine.Update(GameStateMachine.Signal.DoneTouch);
+                        //}
+                        //// 进行抢底
+                        //// 如果摸牌结束
+                        //if (Touch())
+                        //{
+                        //    // 测试：暂且直接进入炒底阶段
+                        //    //m_gameStateMachine.Update(GameStateMachine.Signal.NoHigherBid);
+                        //    // 测试：设抢到底牌者是 id=0 者
+                        //    m_dealer.gotBottomPlayerId = 0;
+                        //    // 完成摸牌
+                        //    m_gameStateMachine.Update(GameStateMachine.Signal.DoneTouch);
+                        //}
+                        break;
+                    case GameStateMachine.State.Touch2LastBid:
+                        Touch2LastBid();
+                        m_gameStateMachine.Update(GameStateMachine.Signal.DoneTouch2LastBid);
+                        break;
+                    case GameStateMachine.State.LastBid:
+                        bool isOverTime = LastBid();
+                        // 如果已经没有更高的出价，或者已经超时了
+                        if (m_dealer.NoHigherBid() || isOverTime)
+                        {
+                            // 直接让庄家埋底
+                            m_gameStateMachine.Update(GameStateMachine.Signal.EndLastBid);
+                        }
+                        break;
+                    case GameStateMachine.State.LastBid2BidBury:
+                        LastBid2BidBury();
+                        m_gameStateMachine.Update(GameStateMachine.Signal.DoneLastBid2BidBury);
+                        break;
+                    case GameStateMachine.State.BidBury:
+                        isOk = BidBury();
+                        if (isOk)
+                        {
+                            m_gameStateMachine.Update(GameStateMachine.Signal.DoneBidBury);
                         }
                         break;
                     case GameStateMachine.State.Bid2Fry:
                         Bid2Fry();
                         m_gameStateMachine.Update(GameStateMachine.Signal.DoneBid2Fry);
                         Console.WriteLine("开始炒底");
-
                         break;
                     //case GameStateMachine.State.Fry:
                     //    // 如果炒底结束
@@ -782,7 +1203,6 @@ namespace server_0._0._1
                         {
                             // 该玩家得以继续埋底
                             m_gameStateMachine.Update(GameStateMachine.Signal.SuccessfulShow);
-
                         }
                         else// 否则继续亮牌
                         {
@@ -808,7 +1228,7 @@ namespace server_0._0._1
                         }
                         break;
                     case GameStateMachine.State.FryBury:
-                        bool isOk = FryBury();
+                        isOk = FryBury();
                         // 如果炒底阶段结束
                         //if (m_dealer.NoHigerFry())
                         if (isOk && m_dealer.FryEnd())
@@ -829,10 +1249,43 @@ namespace server_0._0._1
                         FryBury2Show();
                         m_gameStateMachine.Update(GameStateMachine.Signal.DoneFryBury2Show);
                         break;
-                    case GameStateMachine.State.Fry2Fight:
-                        Fry2Fight();
-                        m_gameStateMachine.Update(GameStateMachine.Signal.DoneFry2Fight);
-                        Console.WriteLine("开始对战");
+                    //case GameStateMachine.State.Fry2Fight:
+                    //    Fry2Fight();
+                    //    m_gameStateMachine.Update(GameStateMachine.Signal.DoneFry2Fight);
+                    //    Console.WriteLine("开始对战");
+                    //    break;
+                    case GameStateMachine.State.Fry2FindFriend:
+                        Fry2FindFriend();
+                        m_gameStateMachine.Update(GameStateMachine.Signal.DoneFry2FindFriend);
+                        break;
+                    case GameStateMachine.State.FindFriend:
+                        isOk = FindFriend();
+                        if (isOk)
+                        {
+                            if (m_dealer.bankerIsFightAlone)
+                            {
+                                m_gameStateMachine.Update(GameStateMachine.Signal.IsFightAlone);
+                            }
+                            else
+                            {
+                                m_gameStateMachine.Update(GameStateMachine.Signal.HasFriend);
+                            }
+                        }
+                        break;
+                    case GameStateMachine.State.FindFriend2Linger:
+                        FindFriend2Linger();
+                        m_gameStateMachine.Update(GameStateMachine.Signal.DoneFindFriend2Linger);
+                        break;
+                    case GameStateMachine.State.FindFriendLinger:
+                        isOk = FindFriendLinger();
+                        if (isOk)
+                        {
+                            m_gameStateMachine.Update(GameStateMachine.Signal.DoneFindFriendLinger);
+                        }
+                        break;
+                    case GameStateMachine.State.FindFriend2Fight:
+                        FindFriend2Fight();
+                        m_gameStateMachine.Update(GameStateMachine.Signal.DoneFindFriend2Fight);
                         break;
                     case GameStateMachine.State.Fight:
                         // 玩家轮流出牌

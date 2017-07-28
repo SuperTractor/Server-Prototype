@@ -24,11 +24,13 @@ namespace GameUtility
         public PlayerInfo(string name)
         {
             this.name = name;
+            cardInHand = new List<Card>();
         }
         public PlayerInfo(string name,int id)
         {
             this.name = name;
             this.id = id;
+            cardInHand = new List<Card>();
         }
     }
 }
