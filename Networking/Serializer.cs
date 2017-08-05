@@ -30,9 +30,9 @@ namespace Networking
                     var bin_form = new BinaryFormatter();
                     obj = bin_form.Deserialize(memoryStream);
                 }
-                catch (SerializationException e)
+                catch/* (SerializationException e)*/
                 {
-                    Console.WriteLine("Failed to deserialize. Reason: " + e.Message);
+                    //Console.WriteLine("Failed to deserialize. Reason: " + e.Message);
                     throw;
                 }
                 return obj;
@@ -48,9 +48,11 @@ namespace Networking
                 // 等待接受者的回复(wait for reply)
                 //ReceiveNoReply(mySocket);
             }
-            catch (SocketException ex)
+            catch/* (SocketException ex)*/
             {
-                Console.Write(ex.Message);
+                //Console.Write(ex.Message);
+                //throw new Exception("此客户端断开了连接");
+                throw;
             }
         }
 
@@ -74,7 +76,17 @@ namespace Networking
             mySocket.Receive(temp);
             // 回复发送者(reply)
             //SendNoWait(mySocket, "");
-            return Deserialize(temp);
+            object obj;
+            try
+            {
+                obj = Deserialize(temp);
+            }
+            catch/* (SerializationException)*/
+            {
+                //throw new Exception("客户端断开了连接");
+                throw;
+            }
+            return obj;
         }
         //public static object ReceiveNoReply(Socket mySocket)
         //{

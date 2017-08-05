@@ -10,6 +10,8 @@ namespace GameUtility
         // 游戏的状态
         public enum State
         {
+            //Broadcasting,   // 广播详细阶段，用于通知在线客户端一些须知信息
+            GetReady,   // 等待其他玩家（此时房间内人数小于 4）
             Deal,   // 发牌阶段
             Deal2Bid,   // 发牌到抢底的缓冲阶段
             //Bid,    // 抢底阶段
@@ -42,6 +44,10 @@ namespace GameUtility
         // 可以向游戏状态机发送的信号
         public enum Signal
         {
+            //GoBroadcasting,     // 指示广播操作
+            //DoneBroadcasting,   // 完成广播操作
+            //NotReady,   // 游戏还没有准备好开始
+            Ready,      // 有 4 个玩家进入房间，可以开始游戏
             DoneDeal,   // 完成发牌
             DoneDeal2Bid,   // 完成发牌-抢底缓冲阶段的清理, 初始化
             DoneTouch,      // 完成摸牌
@@ -80,6 +86,14 @@ namespace GameUtility
         {
             switch (signal)
             {
+                //case Signal.NotReady:
+                //    m_state = State.GetReady;
+                //    break;
+
+                case Signal.Ready:
+                    m_state = State.Deal;
+                    break;
+
                 // 如果已经完成发牌
                 case Signal.DoneDeal:
                     // 将游戏状态设置为抢底
