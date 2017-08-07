@@ -2489,6 +2489,21 @@ namespace GameUtility
         {
             firstHomePlayerId = 0;
         }
+        // 更新庄家
+        public void UpdateBanker(Card[] dealCards)
+        {
+            // 如果庄家不选择单打，并且现在只有 1 个庄家
+            if (!bankerIsFightAlone && bankerPlayerId.Count < 2)
+            {
+                int idx = Array.FindIndex(dealCards, card => card == signCard);
+                // 如果找得到信号牌
+                if (idx >= 0)
+                {
+                    // 把当前出牌玩家记为庄家
+                    bankerPlayerId.Add(m_currentPlayerId);
+                }
+            }
+        }
 
         // 炒底阶段，帮指定玩家代理亮牌
         public Card[] AutoAddShowCard(int playerId)

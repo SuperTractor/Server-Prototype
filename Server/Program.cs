@@ -924,6 +924,7 @@ namespace server_0._0._1
         {
             // 重启寻友计时器
             m_findFriendStopwatch.Restart();
+            // TODO：炒底确定庄家
         }
 
         static bool FindFriend()
@@ -963,11 +964,9 @@ namespace server_0._0._1
                 //bool isFindFriend = (bool)ComServer.Respond(m_players[bankerId].socket, "收到");
                 bool isFindFriend = (bool)ComServer.Respond(bankerId, "收到");
 
-
                 // 检查庄家是否选择单打
                 //bool isAlone = (bool)ComServer.Respond(m_players[bankerId].socket, "收到");
                 bool isAlone = (bool)ComServer.Respond(bankerId, "收到");
-
 
                 isOk = isAlone || isFindFriend;
                 hasOperation = isAlone || isFindFriend;
@@ -1023,6 +1022,9 @@ namespace server_0._0._1
         {
             // 重启计时器
             m_findFriendLingerStopwatch.Restart();
+            // 设置首家出牌ID
+            m_dealer.firstHomePlayerId = m_dealer.bankerPlayerId[0];
+
         }
 
         static bool FindFriendLinger()
@@ -1188,6 +1190,9 @@ namespace server_0._0._1
                         }
                         // 重置思考计时器
                         m_handOutStopwatch.Reset();
+
+                        // 更新庄家
+                        m_dealer.UpdateBanker(m_dealCards);
                     }
                     // 向出牌玩家发送手牌
                     // 如果出牌合法，这手牌有所减少；否则，手牌没有改变
@@ -1216,6 +1221,9 @@ namespace server_0._0._1
                             // 再发送出牌
                             //ComServer.Respond(m_players[j].socket, Card.ToInt(m_dealCards));
                             ComServer.Respond(j, Card.ToInt(m_dealCards));
+
+                            // 发送当前庄家 ID
+                            ComServer.Respond(j, m_dealer.bankerPlayerId.ToArray());
 
                         }
                         // 存储出牌到荷官
@@ -1295,6 +1303,9 @@ namespace server_0._0._1
             //{
             //    m_players[i].playerInfo.cardInHand.Clear();
             //}
+
+            // 清空庄家 ID
+            m_dealer.bankerPlayerId.Clear();
         }
 
         // 更新荷官需要掌握的信息
