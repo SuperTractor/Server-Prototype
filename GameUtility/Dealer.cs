@@ -2342,13 +2342,26 @@ namespace GameUtility
         // 判断出牌合法性(对战阶段)
         public Judgement IsLegalDeal(PlayerInfo[] m_player, Card[] cards)
         {
-            RulePlayer[] tmp = PlayerToRulePlayer(m_player);
-            CardList playCard = CardArrayToCardList(cards);
-            CardList firstCard = CardListToCardList(handOutCards[firstHomePlayerId]);
-            if (currentPlayerId == firstHomePlayerId)
-                return canPlay(playCard, tmp, currentPlayerId);
+            // 规则组：出2张牌会卡住，可能是死循环
+            //RulePlayer[] tmp = PlayerToRulePlayer(m_player);
+            //CardList playCard = CardArrayToCardList(cards);
+            //CardList firstCard = CardListToCardList(handOutCards[firstHomePlayerId]);
+            //if (currentPlayerId == firstHomePlayerId)
+            //    return canPlay(playCard, tmp, currentPlayerId);
+            //else
+            //    return canPlay(firstCard, playCard, tmp[currentPlayerId].cardInHand);
+
+            // 暂且无规则
+            if (dealRequiredLength <= 0)
+            {
+                return new Judgement("", cards.Length > 0);
+            }
             else
-                return canPlay(firstCard, playCard, tmp[currentPlayerId].cardInHand);
+            {
+                return new Judgement("", cards.Length == dealRequiredLength);
+            }
+
+
         }
 
         public void SetCurrentPlayerId(int id)

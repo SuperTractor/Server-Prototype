@@ -281,7 +281,7 @@ namespace Networking
                 //string name = (string)Respond(socket, id);
                 // 新增客户端
                 m_players.Add(new Player("temp-name", id, socket));
-                Player thisPlayer = m_players.Last();
+                //Player thisPlayer = m_players.Last();
                 // 启动邮差
                 //StartPostman(thisPlayer);
 
