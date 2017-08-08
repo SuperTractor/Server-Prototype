@@ -369,7 +369,10 @@ namespace GameUtility
 
         // 当前玩家ID
         private int m_currentPlayerId;
-        public int currentPlayerId { get { return m_currentPlayerId; } }
+        public int currentPlayerId {
+            get { return m_currentPlayerId; }
+            set { m_currentPlayerId = value; }
+        }
 
         // 当前台上方玩家ID
         private int[] m_upperPlayersId;

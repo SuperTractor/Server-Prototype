@@ -47,7 +47,7 @@ namespace server_0._0._1
         // 当前应该显示牌数
         static int m_handCardShowNumber;
         // 抢底阶段显示手牌的延迟(毫秒)
-        static int m_touchCardDelay = 10;
+        static int m_touchCardDelay = 1000;
         // 用于辅助模拟摸牌效果的计时器
         static Stopwatch m_touchCardStopwatch;
         // 用于最后抢底阶段的计时器
@@ -660,6 +660,9 @@ namespace server_0._0._1
 
             // 当前玩家是否已经超时
             bool isTimeOut = m_showCardStopwatch.ElapsedMilliseconds > m_showCardDelay;
+            // 当前玩家有没有亮牌
+            bool hasShow = m_dealer.showCards[m_dealer.currentFryPlayerId].Count > 0;
+
 
             for (int j = 0; j < m_players.Count; j++)
             {
@@ -667,6 +670,9 @@ namespace server_0._0._1
                 //ComServer.Respond(m_players[j].socket, m_dealer.currentFryPlayerId);
 
                 ComServer.Respond(j, m_dealer.currentFryPlayerId);
+
+                // 发送玩家先前有没有亮牌
+                ComServer.Respond(j, hasShow);
 
                 // 发送当前炒底玩家剩余思考时间
                 //ComServer.Respond(m_players[j].socket, (m_showCardDelay - (int)m_showCardStopwatch.ElapsedMilliseconds) / 1000);
@@ -678,7 +684,21 @@ namespace server_0._0._1
             //ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, isTimeOut);
 
             ComServer.Respond(m_dealer.currentFryPlayerId, isTimeOut);
+            // 如果当前玩家有亮牌
+            if (hasShow)
+            {
+                // 把当前亮牌玩家之前的亮牌重新加回去他的手牌里去
+                m_players[m_dealer.currentFryPlayerId].cardInHand.AddRange(m_dealer.showCards[m_dealer.currentFryPlayerId]);
+                // 清空亮牌
+                m_dealer.showCards[m_dealer.currentFryPlayerId].Clear();
+                // 把手牌发到客户端
+                ComServer.Respond(m_dealer.currentFryPlayerId, Card.ToInt(m_players[m_dealer.currentFryPlayerId].cardInHand));
+            }
+            // 如果当前玩家没有亮牌
+            else
+            {
 
+            }
 
             // 如果超时了
             if (isTimeOut)
@@ -697,6 +717,8 @@ namespace server_0._0._1
             // 如果玩家选择跟牌
             if (m_isFollow)
             {
+
+
                 // 检查当前亮牌玩家是否需要提示
                 //bool isNeedTips = (bool)ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, "收到");
                 bool isNeedTips = (bool)ComServer.Respond(m_dealer.currentFryPlayerId, "收到");
@@ -783,7 +805,6 @@ namespace server_0._0._1
                     {
                         //ComServer.Respond(m_players[j].socket, Card.ToInt(m_dealer.showCards[m_dealer.currentFryPlayerId].ToArray()));
                         ComServer.Respond(j, Card.ToInt(m_dealer.showCards[m_dealer.currentFryPlayerId].ToArray()));
-
                     }
                 }
                 else
@@ -925,6 +946,20 @@ namespace server_0._0._1
             // 重启寻友计时器
             m_findFriendStopwatch.Restart();
             // TODO：炒底确定庄家
+
+            for (int j = 0; j < m_players.Count; j++)
+            {
+                // 将炒底的亮牌重新放到玩家的手牌里去
+                m_players[j].cardInHand.AddRange(m_dealer.showCards[j]);
+                // 向玩家发送手牌
+                //ComServer.Respond(m_players[j].socket, Card.ToInt(m_players[j].playerInfo.cardInHand/*.ToArray()*/));
+                ComServer.Respond(j, Card.ToInt(m_players[j].cardInHand/*.ToArray()*/));
+            }
+            // 清空亮牌
+            for (int j = 0; j < m_players.Count; j++)
+            {
+                m_dealer.showCards[j].Clear();
+            }
         }
 
         static bool FindFriend()
@@ -1041,19 +1076,12 @@ namespace server_0._0._1
             // 标志可以开始计时
             m_isOkCountDown = true;
 
-            for (int j = 0; j < m_players.Count; j++)
-            {
-                // 将炒底的亮牌重新放到玩家的手牌里去
-                m_players[j].cardInHand.AddRange(m_dealer.showCards[j]);
-                // 向玩家发送手牌
-                //ComServer.Respond(m_players[j].socket, Card.ToInt(m_players[j].playerInfo.cardInHand/*.ToArray()*/));
-                ComServer.Respond(j, Card.ToInt(m_players[j].cardInHand/*.ToArray()*/));
-            }
-            // 清空亮牌
-            for (int j = 0; j < m_players.Count; j++)
-            {
-                m_dealer.showCards[j].Clear();
-            }
+
+
+            // 设置首家亮牌为庄家
+            m_dealer.firstHomePlayerId = m_dealer.bankerPlayerId[0];
+            // 设置当前出牌玩家为首家
+            m_dealer.currentPlayerId = m_dealer.firstHomePlayerId;
         }
 
         static void Fight()
