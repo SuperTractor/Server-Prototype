@@ -26,8 +26,6 @@ namespace GameUtility
         public
           CardList raw; // 原始数据
         public
-  List<int> maxtractor;  //最长拖拉机，仅在甩牌时有值
-        public
           int TransFromCardList(int a)
         {
             return a % 13 == 12 ? 1 : a % 13 + 2;
@@ -36,7 +34,6 @@ namespace GameUtility
           cardComb(CardList init, int mn, int mc)
         {
             Count = 0;
-            maxtractor = null;
             raw = init;
             valid = true;
             thrown = false;
@@ -149,7 +146,6 @@ namespace GameUtility
             if (oc[1])
             {
                 thisSame = 1;
-                thisType = 1;
                 return;
             }
             for (int i = 2; i <= 4; i++)
@@ -311,412 +307,8 @@ namespace GameUtility
             // 甩牌 记录最长拖拉机 TODO
             isThrown:
             {
-                thisSame = 0;
-                thisType = 5;
-                maxtractor = longtractor(init, thisColor, mainColor, mainNumber);
             }
             // 重新初始化
-        }
-
-        /// <summary>
-        /// 找出长度为k的最大的拖拉机
-        /// </summary>
-        /// <param name="temp"></param>
-        /// <param name="k"></param>
-        /// <returns></returns>
-        List<int> findtractor(CardList temp, int k, int thisColor, int mainColor, int mainNumber)
-        {
-            List<int> maxtractor = new List<int>();
-            List<int> currenttractor = new List<int>();
-            if (mainColor == 4)
-            {
-                if (thisColor == 4)
-                {
-                    // 副主级牌
-                    for (int i = 0; i < 4; i++)
-                        if (temp.data[i * 13 + mainNumber] > 1)
-                        {
-                            currenttractor.Add(i);
-                        }
-                    // 大小王
-                    for (int i = 52; i < 54; i++)
-                    {
-                        if (temp.data[i] > 1)
-                        {
-                            currenttractor.Add(i);
-
-                        }
-                        else
-                        {
-                            //如果拖拉机长度大于等于k且最大牌较大,则将最大的k张牌赋值到maxtractor中
-                            if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                            {
-                                maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
-                            }
-
-                        }
-
-                    }
-                    if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                    {
-                        maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
-                    }
-                }
-                else
-                {
-                    // 四种花色副牌
-                    for (int i = thisColor * 13; i < (thisColor + 1) * 13; i++)
-                        if (i - thisColor * 13 != mainNumber)
-                            if (temp.data[i] > 1)
-                            {
-                                currenttractor.Add(i);
-
-                            }
-                            else
-                            {
-                                if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                                {
-                                    maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
-                                }
-
-                            }
-                    if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                    {
-                        maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
-                    }
-
-                }
-            }
-            else
-            {
-                if (thisColor == mainColor)
-                {
-                    // 主花色牌
-                    for (int i = thisColor * 13; i < (thisColor + 1) * 13; i++)
-                        if (i - thisColor * 13 != mainNumber)
-                            if (temp.data[i] > 1)
-                            {
-                                currenttractor.Add(i);
-
-                            }
-                            else
-                            {
-                                if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                                {
-                                    maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
-                                }
-
-                            }
-                    // 副主级牌
-                    for (int i = 0; i < 4; i++)
-                        if (i != mainColor && temp.data[i * 13 + mainNumber] > 0)
-                        {
-                            int j = i * 13 + mainNumber;
-                            if (temp.data[j] > 1)
-                            {
-                                currenttractor.Add(j);
-
-                            }
-                            else
-                            {
-
-                                if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                                {
-                                    maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
-                                }
-
-                            }
-                        }
-                    // 主级牌
-                    if (temp.data[mainColor * 13 + mainNumber] > 1)
-                    {
-                        currenttractor.Add(mainColor * 13 + mainNumber);
-
-                    }
-                    else
-                    {
-                        if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                        {
-                            maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
-                        }
-                    }
-
-
-
-                    // 大小王
-                    for (int i = 52; i < 54; i++)
-                    {
-                        if (temp.data[i] > 1)
-                        {
-                            currenttractor.Add(i);
-
-                        }
-                        else
-                        {
-                            if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                            {
-                                maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
-                            }
-
-                        }
-
-                    }
-                    if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                    {
-                        maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
-                    }
-                }
-                else
-                {
-                    // 副牌
-                    for (int i = thisColor * 13; i < (thisColor + 1) * 13; i++)
-                        if (i - thisColor * 13 != mainNumber)
-                            if (temp.data[i] > 1)
-                            {
-                                currenttractor.Add(i);
-
-                            }
-                            else
-                            {
-                                if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                                {
-                                    maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
-                                }
-
-                            }
-                    if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                    {
-                        maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
-                    }
-
-                }
-            }
-
-            return maxtractor;
-
-        }
-        /// <summary>
-        /// 找出最长的拖拉机
-        /// </summary>
-        /// <param name="temp"></param>
-        /// <returns></returns>
-        List<int> longtractor(CardList temp, int thisColor, int mainColor, int mainNumber)
-        {
-            List<int> maxtractor = new List<int>();
-            List<int> currenttractor = new List<int>();
-            if (mainColor == 4)
-            {
-                if (thisColor == 4)
-                {
-                    // 副主级牌
-                    for (int i = 0; i < 4; i++)
-                        if (temp.data[i * 13 + mainNumber] > 1)
-                        {
-                            currenttractor.Add(i);
-                        }
-                    // 大小王
-                    for (int i = 52; i < 54; i++)
-                    {
-                        if (temp.data[i] > 1)
-                        {
-                            currenttractor.Add(i);
-
-                        }
-                        else
-                        {
-                            maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
-                            currenttractor.Clear();
-
-                        }
-
-                    }
-                    maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
-                    currenttractor.Clear();
-                }
-                else
-                {
-                    // 四种花色副牌
-                    for (int i = thisColor * 13; i < (thisColor + 1) * 13; i++)
-                        if (i - thisColor * 13 != mainNumber)
-                            if (temp.data[i] > 1)
-                            {
-                                currenttractor.Add(i);
-
-                            }
-                            else
-                            {
-                                maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
-                                currenttractor.Clear();
-
-                            }
-                    maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
-                    currenttractor.Clear();
-
-                }
-            }
-            else
-            {
-                if (thisColor == mainColor)
-                {
-                    // 主花色牌
-                    for (int i = thisColor * 13; i < (thisColor + 1) * 13; i++)
-                        if (i - thisColor * 13 != mainNumber)
-                            if (temp.data[i] > 1)
-                            {
-                                currenttractor.Add(i);
-
-                            }
-                            else
-                            {
-                                maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
-                                currenttractor.Clear();
-
-                            }
-                    // 副主级牌
-                    for (int i = 0; i < 4; i++)
-                        if (i != mainColor && temp.data[i * 13 + mainNumber] > 0)
-                        {
-                            int j = i * 13 + mainNumber;
-                            if (temp.data[j] > 1)
-                            {
-                                currenttractor.Add(j);
-
-                            }
-                            else
-                            {
-
-                                maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
-                                currenttractor.Clear();
-
-                            }
-                        }
-                    // 主级牌
-                    if (temp.data[mainColor * 13 + mainNumber] > 1)
-                    {
-                        currenttractor.Add(mainColor * 13 + mainNumber);
-
-                    }
-                    else
-                    {
-                        maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
-                        currenttractor.Clear();
-                    }
-
-
-
-                    // 大小王
-                    for (int i = 52; i < 54; i++)
-                    {
-                        if (temp.data[i] > 1)
-                        {
-                            currenttractor.Add(i);
-
-                        }
-                        else
-                        {
-                            maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
-                            currenttractor.Clear();
-
-                        }
-
-                    }
-                    maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
-                    currenttractor.Clear();
-                }
-                else
-                {
-                    // 副牌
-                    for (int i = thisColor * 13; i < (thisColor + 1) * 13; i++)
-                        if (i - thisColor * 13 != mainNumber)
-                            if (temp.data[i] > 1)
-                            {
-                                currenttractor.Add(i);
-
-                            }
-                            else
-                            {
-                                maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
-                                currenttractor.Clear();
-
-                            }
-                    maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
-                    currenttractor.Clear();
-
-                }
-            }
-            return maxtractor;
-        }
-
-        /// <summary>
-        /// 判断两张牌的大小
-        /// </summary>
-        /// <param name="a">牌1，用54个数字表示</param>
-        /// <param name="b">牌2，用54个数字表示</param>
-        /// <param name="mainColor"></param>
-        /// <param name="mainNumber"></param>
-        /// <returns>a>b返回true，否则返回false</returns>
-        bool biggerThan(int a, int b, int mainColor, int mainNumber)
-        {
-            if (a == -1)
-                return false;
-            if (b == -1)
-                return true;
-            if (a == b)
-                return false;
-            if (mainColor == 4)
-            {
-                // 大小王
-                if (a == 53 || (a == 52 && b != 53))
-                    return true;
-                if (b == 53 || (b == 52 && a != 53))
-                    return false;
-                // 主级牌
-                if (a % 13 == mainNumber && b % 13 == mainNumber)
-                    return false;
-                if (a % 13 == mainNumber && b % 13 != mainNumber)
-                    return true;
-                if (a % 13 != mainNumber && b % 13 == mainNumber)
-                    return false;
-                // 副牌
-                if (a % 13 > b % 13)
-                    return true;
-                else
-                    return false;
-            }
-            else // 有主
-            {
-                // 大小王
-                if (a == 53 || (a == 52 && b != 53))
-                    return true;
-                if (b == 53 || (b == 52 && a != 53))
-                    return false;
-                // 主级牌
-                if (b % 13 == mainNumber && b / 13 == mainColor)
-                    return false;
-                if (a % 13 == mainNumber && a / 13 == mainColor)
-                    return true;
-                // 副主级牌
-                if (b % 13 == mainNumber && b / 13 != mainColor)
-                    return false;
-                if (a % 13 == mainNumber && a / 13 != mainColor)
-                    return true;
-                //主花色牌
-                if (a / 13 == mainColor)
-                    if (b / 13 == mainColor)
-                    {
-                        if (a % 13 > b % 13)
-                            return true;
-                        else
-                            return false;
-                    }
-                    else
-                        return true;
-                // 副牌
-                if (a % 13 > b % 13)
-                    return true;
-                else
-                    return false;
-            }
         }
     }
 
@@ -777,8 +369,7 @@ namespace GameUtility
 
         // 当前玩家ID
         private int m_currentPlayerId;
-        public int currentPlayerId
-        {
+        public int currentPlayerId {
             get { return m_currentPlayerId; }
             set { m_currentPlayerId = value; }
         }
@@ -845,7 +436,7 @@ namespace GameUtility
             }
             set
             {
-                m_handOutPlayerCount = value % playerNumber;
+                m_handOutPlayerCount = value % 4;
             }
         }
         // 当前轮数，4 个玩家都出 1 次牌为一轮
@@ -1081,7 +672,7 @@ namespace GameUtility
         RulePlayer[] PlayerToRulePlayer(PlayerInfo[] res)
         {
             RulePlayer[] tmp = new RulePlayer[4];
-            for (int i = 0; i < 4; i++)
+            for(int i = 0; i < 4; i++)
             {
                 tmp[i] = new RulePlayer();
             }
@@ -1618,16 +1209,16 @@ namespace GameUtility
 
             if (!fc.valid)
             {
-                return new Judgement("invalid", false);
+                return new Judgement("出牌不合法", false);
             }
             if (!fc.thrown)
-                return new Judgement("valid", true);
+                return new Judgement("正常出牌", true);
             else //甩牌咯
             {
                 if (canThrow(firstCard, player, thisplayer))
-                    return new Judgement("throw", true);
+                    return new Judgement("可以甩牌", true);
                 else
-                    return new Judgement("throwFail", false);
+                    return new Judgement("甩牌失败", false);
             }
         }
 
@@ -1641,7 +1232,6 @@ namespace GameUtility
         public
           int orderCompare(CardList firstCard, CardList playCard, CardList handCard)
         {
-            Console.WriteLine("主花色" + mainColor + ' ' + "主级数" + mainNumber);
             cardComb fc = new cardComb(firstCard, mainNumber, mainColor),
                 pc = new cardComb(playCard, mainNumber, mainColor);
 
@@ -2743,40 +2333,38 @@ namespace GameUtility
             switch (orderCompare(firstCard, playCard, handCard))
             {
                 case 0:
-                    return new Judgement("invalid", false);
+                    return new Judgement("有得出不出", false);
                 case 1:
-                    return new Judgement("notShot", true);
+                    return new Judgement("不毙", true);
                 case 2:
-                    return new Judgement("shot", true);
+                    return new Judgement("毙", true);
             }
-            return new Judgement("placeholder", true);
+            return new Judgement("占位", true);
         }
 
         // 判断出牌合法性(对战阶段)
         public Judgement IsLegalDeal(PlayerInfo[] m_player, Card[] cards)
         {
             // 规则组：出2张牌会卡住，可能是死循环
-            RulePlayer[] tmp = PlayerToRulePlayer(m_player);
-            CardList playCard = CardArrayToCardList(cards);
-            CardList firstCard = CardListToCardList(handOutCards[firstHomePlayerId]);
-            if (currentPlayerId == firstHomePlayerId)
+            //RulePlayer[] tmp = PlayerToRulePlayer(m_player);
+            //CardList playCard = CardArrayToCardList(cards);
+            //CardList firstCard = CardListToCardList(handOutCards[firstHomePlayerId]);
+            //if (currentPlayerId == firstHomePlayerId)
+            //    return canPlay(playCard, tmp, currentPlayerId);
+            //else
+            //    return canPlay(firstCard, playCard, tmp[currentPlayerId].cardInHand);
+
+            // 暂且无规则
+            if (dealRequiredLength <= 0)
             {
-                return canPlay(playCard, tmp, currentPlayerId);
+                return new Judgement("", cards.Length > 0);
             }
             else
             {
-                return canPlay(firstCard, playCard, tmp[currentPlayerId].cardInHand);
+                return new Judgement("", cards.Length == dealRequiredLength);
             }
 
-            //// 暂且无规则
-            //if (dealRequiredLength <= 0)
-            //{
-            //    return new Judgement("", cards.Length > 0);
-            //}
-            //else
-            //{
-            //    return new Judgement("", cards.Length == dealRequiredLength);
-            //}
+
         }
 
         public void SetCurrentPlayerId(int id)
@@ -2903,11 +2491,6 @@ namespace GameUtility
         public void UpdateFirstHome()
         {
             firstHomePlayerId = 0;
-        }
-        // 更新首家
-        public void UpdateFirstHome(int res)
-        {
-            firstHomePlayerId = res;
         }
         // 更新庄家
         public void UpdateBanker(Card[] dealCards)

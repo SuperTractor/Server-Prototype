@@ -22,7 +22,7 @@ namespace Networking
         // 服务器的 IP 地址
         static IPAddress m_ip;
         //static string m_ipStr = "120.24.217.239";
-        static string m_ipStr = "10.0.0.26";
+        static string m_ipStr = "172.21.186.34";
         // 挂起的连接队列的最大长度
         static int m_backlog = 1000;
         // 服务器容量

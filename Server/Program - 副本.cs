@@ -47,7 +47,7 @@ namespace server_0._0._1
         // 当前应该显示牌数
         static int m_handCardShowNumber;
         // 抢底阶段显示手牌的延迟(毫秒)
-        static int m_touchCardDelay = 1;
+        static int m_touchCardDelay = 1000;
         // 用于辅助模拟摸牌效果的计时器
         static Stopwatch m_touchCardStopwatch;
         // 用于最后抢底阶段的计时器
@@ -96,7 +96,7 @@ namespace server_0._0._1
         // 出牌计时器
         static Stopwatch m_handOutStopwatch;
         // 玩家拥有的出牌思考时间(毫秒)
-        static int m_handOutTimeLimit = 100000000;
+        static int m_handOutTimeLimit = 30000;
         // 上一次检查时的出牌玩家 id
         //static int m_lastCheckHandOutPlayerId;
         // 标志可以开始出牌思考计时
@@ -1175,6 +1175,7 @@ namespace server_0._0._1
 
                         //m_dealCards = Card.ToCard((int[])ComServer.Respond(m_players[m_dealer.currentPlayerId].socket, "收到出牌"));
                         m_dealCards = Card.ToCard((int[])ComServer.Respond(m_dealer.currentPlayerId, "收到出牌"));
+
                     }
                 }
 
@@ -1187,10 +1188,7 @@ namespace server_0._0._1
 
                     // 用来判断出牌合法性的所有信息都包含在 Dealer 里头
                     Judgement judgement = m_dealer.IsLegalDeal(m_players.ToArray(), m_dealCards);
-                    Console.Write(judgement.isValid);
-                    Console.Write(' ');
-                    Console.WriteLine(judgement.message);
-                    
+
                     // 当玩家是自主行动，不是代理出牌
                     if (!isTimeOut && !isAutoPlay)
                     {
@@ -1198,16 +1196,12 @@ namespace server_0._0._1
                         // 一定要保证 Receive 和 Send 操作之间, 没有其他网络通信
                         //ComServer.Respond(m_players[m_dealer.currentPlayerId].socket, judgement);
                         ComServer.Respond(m_dealer.currentPlayerId, judgement);
+
                     }
 
                     // 如果出牌合法
                     if (judgement.isValid)
                     {
-                        // 若压制则更新首家
-                        if (judgement.message == "shot")
-                        {
-                            m_dealer.UpdateFirstHome(m_dealer.currentPlayerId);
-                        }
                         // 将选牌从手牌中扣除
                         for (int j = 0; j < m_dealCards.Length; j++)
                         {
@@ -1224,6 +1218,7 @@ namespace server_0._0._1
                         }
                         // 重置思考计时器
                         m_handOutStopwatch.Reset();
+
                         // 更新庄家
                         m_dealer.UpdateBanker(m_dealCards);
                     }
@@ -1232,11 +1227,13 @@ namespace server_0._0._1
                     //ComServer.Respond(m_players[m_dealer.currentPlayerId].socket, Card.ToInt(m_players[m_dealer.currentPlayerId].playerInfo.cardInHand));
                     ComServer.Respond(m_dealer.currentPlayerId, Card.ToInt(m_players[m_dealer.currentPlayerId].cardInHand));
 
+
                     for (int i = 0; i < m_players.Count; i++)
                     {
                         // 将出牌的处理结果发放给所有玩家
                         //ComServer.Respond(m_players[i].socket, judgement.isValid);
                         ComServer.Respond(i, judgement.isValid);
+
                     }
 
                     if (judgement.isValid)
@@ -1248,20 +1245,22 @@ namespace server_0._0._1
                             //ComServer.Respond(m_players[j].socket, m_players[m_dealer.currentPlayerId].playerInfo.id);
                             ComServer.Respond(j, m_players[m_dealer.currentPlayerId].id);
 
+
                             // 再发送出牌
                             //ComServer.Respond(m_players[j].socket, Card.ToInt(m_dealCards));
                             ComServer.Respond(j, Card.ToInt(m_dealCards));
 
                             // 发送当前庄家 ID
                             ComServer.Respond(j, m_dealer.bankerPlayerId.ToArray());
+
                         }
                         // 存储出牌到荷官
                         m_dealer.handOutCards[m_dealer.currentPlayerId] = new List<Card>(m_dealCards);
+                        // 更新首家
+                        m_dealer.UpdateFirstHome();
                         // 下一玩家出牌
                         m_dealer.handOutPlayerCount++;
-                        // 必须保证首家 ID 已经确定了，才能更新下一出牌玩家 ID
                         m_dealer.UpdateNextPlayer();
-                        // 进入下一轮出牌
                         m_dealer.circle++;
                         // 如果最后一个玩家出牌
                         if (m_dealer.handOutPlayerCount == 0)
@@ -1275,10 +1274,6 @@ namespace server_0._0._1
                         m_isOkCountDown = true;
                     }
                     // 否则, 还是同一玩家出牌
-                    else
-                    {
-
-                    }
                 }
                 else// 否则如果玩家还没有出牌
                 {
