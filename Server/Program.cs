@@ -9,13 +9,17 @@ using System.Threading;
 using GameUtility;
 using Networking;
 using System.Diagnostics;
-using cn.bmob.exception;
-using cn.bmob.Extensions;
-using cn.bmob.http;
-using cn.bmob.io;
-using cn.bmob.json;
-using cn.bmob.response;
-using cn.bmob.tools;
+//using cn.bmob.exception;
+//using cn.bmob.Extensions;
+//using cn.bmob.http;
+//using cn.bmob.io;
+//using cn.bmob.json;
+//using cn.bmob.response;
+//using cn.bmob.tools;
+//using cn.bmob.api;
+//using cn.bmob.config;
+using ConsoleUtility;
+using BmobInterface;
 
 namespace server_0._0._1
 {
@@ -33,6 +37,9 @@ namespace server_0._0._1
         // 玩家列表
         //static Player[] m_players;
         static List<PlayerInfo> m_players;
+        // 从 Bmob 提取的玩家统计数据
+        static List<StatObject> m_userStats;
+        //static StatObject m_userStat;
 
         // 游戏准备好开始了
         static bool m_isReady;
@@ -116,13 +123,21 @@ namespace server_0._0._1
             get { return m_doneGameLoopEvent; }
         }
 
+
         //// 网络通信线程的事件
         //static ManualResetEvent[] m_comServerEvents;
-
-       
-
         static void Initialize()
         {
+            Thread.CurrentThread.Name = "主线程";
+
+            // 初始化 bmob 实例
+            BmobInstance.Initialize();
+
+            //BmobInstance.Find("rocky");
+            // 新建用户统计数据
+            m_userStats = new List<StatObject>();
+            //m_userStats.Add(new StatObject("Rocky"));
+
             // 设置命令行的编码为 utf8
             Console.OutputEncoding = Encoding.Unicode;
             playersIsConnected = new bool[Dealer.playerNumber];
@@ -138,6 +153,9 @@ namespace server_0._0._1
 
             // 新建玩家列表
             m_players = new List<PlayerInfo>();
+            // 新建用户统计信息接口
+            //m_userStats = new List<StatObject>();
+            //m_userStat = new StatObject();
 
             //m_players = new Player[Dealer.playerNumber];
             //m_players = new List<PlayerInfo>();
@@ -194,35 +212,42 @@ namespace server_0._0._1
         // 带等候区的玩家进入房间
         static void GetReady()
         {
-            m_players.Clear();
+            //m_players.Clear();
             // 首先更新主程序掌握的玩家列表
             // 对每一个网络交流中的玩家
             for (int i = 0; i < ComServer.players.Count; i++)
             {
                 Player comPlayer = ComServer.players[i];
                 // 检查是否已经更新到主程序
-                //int idx = m_players.FindIndex(player => player.id == comPlayer.id);
+                int idx = m_players.FindIndex(player => player.id == comPlayer.id);
                 // 如果还没有更新到主程序
-                //if (idx < 0)
-                //{
-                //    // 加入此玩家
-                //    m_players.Add(new PlayerInfo(comPlayer.name, comPlayer.id));
-                //}
-                m_players.Add(new PlayerInfo(comPlayer.name, comPlayer.id));
+                if (idx < 0)
+                {
+                    // 加入此玩家
+                    m_players.Add(new PlayerInfo(comPlayer.name, comPlayer.id));
+                    // 加入此玩家的统计数据
+                    m_userStats.Add(new StatObject(comPlayer.name));
+                    // 将统计数据同步到玩家信息中
+                    m_userStats.Last().CopyTo(m_players.Last());
+                }
+
+                //m_players.Add(new PlayerInfo(comPlayer.name, comPlayer.id));
             }
-            //// 对每一个主程序中的玩家
-            //for (int i = 0; i < m_players.Count; i++)
-            //{
-            //    PlayerInfo thisPlayer = m_players[i];
-            //    // 检查是否多余（说明该玩家已经断线）
-            //    int idx = ComServer.players.FindIndex(player => player.id == thisPlayer.id);
-            //    // 如果该玩家不在网络交流中，说明他已经断线了
-            //    if (idx < 0)
-            //    {
-            //        // 移除掉线玩家
-            //        m_players.RemoveAll(player => player.id == thisPlayer.id);
-            //    }
-            //}
+            // 对每一个主程序中的玩家
+            for (int i = 0; i < m_players.Count; i++)
+            {
+                //PlayerInfo thisPlayer = m_players[i];
+                string name = m_players[i].name;
+                // 检查是否多余（说明该玩家已经断线）
+                int idx = ComServer.players.FindIndex(player => player.name == name);
+                // 如果该玩家不在网络交流中，说明他已经断线了
+                if (idx < 0)
+                {
+                    // 移除掉线玩家
+                    m_players.RemoveAll(player => player.name == name);
+                    m_userStats.RemoveAll(stat => stat.username == name);
+                }
+            }
 
 
             // 更新完成

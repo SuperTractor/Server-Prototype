@@ -58,6 +58,10 @@
       <Project>{4b79cfc1-2bb2-44f9-98f0-246313f1b3dd}</Project>
       <Name>BmobInterface</Name>
     </ProjectReference>
+    <ProjectReference Include="..\ConsoleUtility\ConsoleUtility.csproj">
+      <Project>{0e121e75-a3be-4c4b-bf69-b7e23a169170}</Project>
+      <Name>ConsoleUtility</Name>
+    </ProjectReference>
     <ProjectReference Include="..\GameUtility\GameUtility.csproj">
       <Project>{5c4c5817-3e7e-4596-a368-f0ac78f94438}</Project>
       <Name>GameUtility</Name>

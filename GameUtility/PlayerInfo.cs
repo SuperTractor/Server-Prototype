@@ -20,6 +20,16 @@ namespace GameUtility
         public List<Card> cardInHand { get; set; }
         //public Card[] cardInHand { get; set; }
 
+        // 统计数据部分
+        // 最高得分
+        public int highScore { get; set; }
+        // 累计得分
+        public int totalScore { get; set; }
+        // 最高级数
+        public int highLevel { get; set; }
+        // 累计级数
+        public int totalLevel { get; set; }
+
 
         public PlayerInfo(string name)
         {
@@ -32,5 +42,8 @@ namespace GameUtility
             this.id = id;
             cardInHand = new List<Card>();
         }
+
+
+
     }
 }

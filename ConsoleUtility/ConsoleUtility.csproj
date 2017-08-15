@@ -4,13 +4,14 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{4B79CFC1-2BB2-44F9-98F0-246313F1B3DD}</ProjectGuid>
+    <ProjectGuid>{0E121E75-A3BE-4C4B-BF69-B7E23A169170}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>BmobInterface</RootNamespace>
-    <AssemblyName>BmobInterface</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <RootNamespace>ConsoleUtility</RootNamespace>
+    <AssemblyName>ConsoleUtility</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -30,10 +31,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Bmob-Windows, Version=1.5.2.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Plugins\Bmob-Windows.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -44,19 +41,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BmobInstance.cs" />
+    <Compile Include="MyConsole.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="StatObject.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\ConsoleUtility\ConsoleUtility.csproj">
-      <Project>{0e121e75-a3be-4c4b-bf69-b7e23a169170}</Project>
-      <Name>ConsoleUtility</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\GameUtility\GameUtility.csproj">
-      <Project>{5c4c5817-3e7e-4596-a368-f0ac78f94438}</Project>
-      <Name>GameUtility</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
