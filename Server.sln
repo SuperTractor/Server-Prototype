@@ -8,6 +8,11 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Networking", "Networking\Networking.csproj", "{558155B8-9418-4302-B1EF-3AE1C7EECDD3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "Server\Server.csproj", "{56E5F8BF-B29E-45F7-A6D8-55CADEB1E4C9}"
+	ProjectSection(ProjectDependencies) = postProject
+		{4B79CFC1-2BB2-44F9-98F0-246313F1B3DD} = {4B79CFC1-2BB2-44F9-98F0-246313F1B3DD}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BmobInterface", "BmobInterface\BmobInterface.csproj", "{4B79CFC1-2BB2-44F9-98F0-246313F1B3DD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +32,10 @@ Global
 		{56E5F8BF-B29E-45F7-A6D8-55CADEB1E4C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{56E5F8BF-B29E-45F7-A6D8-55CADEB1E4C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{56E5F8BF-B29E-45F7-A6D8-55CADEB1E4C9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4B79CFC1-2BB2-44F9-98F0-246313F1B3DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4B79CFC1-2BB2-44F9-98F0-246313F1B3DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4B79CFC1-2BB2-44F9-98F0-246313F1B3DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4B79CFC1-2BB2-44F9-98F0-246313F1B3DD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

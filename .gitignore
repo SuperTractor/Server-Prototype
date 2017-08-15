@@ -240,3 +240,6 @@ ModelManifest.xml
 
 # FAKE - F# Make
 .fake/
+/Server/Program - 副本.cs
+/GameUtility/Dealer - 副本.cs
+/GameUtility/Dealer - 副本.cs

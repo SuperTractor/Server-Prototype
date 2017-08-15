@@ -9,6 +9,13 @@ using System.Threading;
 using GameUtility;
 using Networking;
 using System.Diagnostics;
+using cn.bmob.exception;
+using cn.bmob.Extensions;
+using cn.bmob.http;
+using cn.bmob.io;
+using cn.bmob.json;
+using cn.bmob.response;
+using cn.bmob.tools;
 
 namespace server_0._0._1
 {
@@ -112,6 +119,8 @@ namespace server_0._0._1
         //// 网络通信线程的事件
         //static ManualResetEvent[] m_comServerEvents;
 
+       
+
         static void Initialize()
         {
             // 设置命令行的编码为 utf8
@@ -173,6 +182,10 @@ namespace server_0._0._1
             //{
             //    m_tempHandCards[i] = new List<Card>();
             //}
+
+            // 初始化 Bmob
+
+
 
             MyConsole.Log("服务器初始化完成", /*"Program",*/ MyConsole.LogType.Debug);
         }

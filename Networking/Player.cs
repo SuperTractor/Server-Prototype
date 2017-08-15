@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using GameUtility;
 using System.Threading;
 using System.Diagnostics;
+using System.IO;
 
 namespace Networking
 {
@@ -87,12 +88,19 @@ namespace Networking
             }
         }
 
+        // 网络流
+        Stream m_networkStream;
+        // 二进制读取流，用于接收数据
+        BinaryReader m_binaryReader;
+        // 二进制写入流，用于发送数据
+        BinaryWriter m_binaryWriter;
+
         /// <summary>
         /// 获取特定频道的最早消息
         /// </summary>
         /// <param name="channel">网络通信频道</param>
         /// <returns>最早消息</returns>
-        Message Receive(int channel)
+        Message Receive(int channel=0)
         {
             Message thisMessage;
             //MyConsole.Log("准备从收件箱中获取频道" + channel.ToString() + "上来自客户端" + m_name + "的消息", "Player-Receive", MyConsole.LogType.Debug);
@@ -107,7 +115,14 @@ namespace Networking
 
             //MyConsole.Log("成功从收件箱中获得频道" + channel.ToString() + "上来自客户端" + m_name + "的消息", "Player-Receive", MyConsole.LogType.Debug);
 
-            thisMessage = (Message)Serializer.Receive(m_socket);
+            //thisMessage = (Message)Serializer.Receive(m_socket);
+
+            // 先接收数据长度
+            int size = m_binaryReader.ReadInt32();
+            // 再接收数据
+            byte[] buf = m_binaryReader.ReadBytes(size);
+            // 反序列化
+            thisMessage = (Message)Serializer.Deserialize(buf);
 
             return thisMessage;
         }
@@ -124,8 +139,13 @@ namespace Networking
             //m_outMessagePool.Add(message);
             //MyConsole.Log("成功向客户端" + m_name + "发件箱投放消息", "Player-Send", MyConsole.LogType.Debug);
 
-            Serializer.Send(m_socket, message);
-
+            //Serializer.Send(m_socket, message);
+            // 发送消息
+            byte[] buf = Serializer.Serialize(message);
+            // 先发送数据长度
+            m_binaryWriter.Write(buf.Length);
+            // 再发送数据本身
+            m_binaryWriter.Write(buf);
         }
 
         // 服务器响应客户端请求
@@ -174,6 +194,7 @@ namespace Networking
             {
                 // 检查消息池内有无此频道的消息
                 message = (Message)Serializer.Receive(m_socket);
+                //message = Receive();
             }
             catch
             {
@@ -202,6 +223,8 @@ namespace Networking
 
             // 发送消息
             Serializer.Send(m_socket, msg);
+
+            //Send(msg);
 
             //try
             //{
@@ -394,6 +417,12 @@ namespace Networking
             //m_postManagerThread.Name = m_id + "邮差管理员";
             // 新建计时器
             //m_receiveStopwatch = new Stopwatch();
+
+            // 初始化网络通信流
+            m_networkStream = new NetworkStream(m_socket);
+            m_binaryReader = new BinaryReader(m_networkStream);
+            m_binaryWriter = new BinaryWriter(m_networkStream);
+
         }
 
         // 加锁

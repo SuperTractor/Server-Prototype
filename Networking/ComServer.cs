@@ -127,7 +127,6 @@ namespace Networking
             m_events[1] = m_doneHandleDisconnect;
         }
 
-
         public static object Respond(int playerId, object sth, int channel = 0)
         {
             Player thisPlayer = m_players.Find(player => player.id == playerId);
