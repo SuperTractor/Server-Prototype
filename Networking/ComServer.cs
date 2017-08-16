@@ -95,6 +95,20 @@ namespace Networking
         // 存放游戏进程和断线处理进程
         static AutoResetEvent[] m_events = new AutoResetEvent[2];
 
+        static IPAddress GetLocalAddress()
+        {
+            var host = Dns.GetHostEntry(Dns.GetHostName());
+            foreach (var ip in host.AddressList)
+            {
+                if (ip.AddressFamily == AddressFamily.InterNetwork)
+                {
+                    return ip;
+                }
+            }
+            throw new Exception("没有找到 IP 地址");
+        }
+
+
         /// <summary>
         /// 初始化函数
         /// </summary>
@@ -112,7 +126,10 @@ namespace Networking
             // 初始化断线客户端 ID
             disconnectClientIds = new List<int>();
             // 初始化 socket
-            m_ip = IPAddress.Parse(m_ipStr);
+            //m_ip = IPAddress.Parse(m_ipStr);
+
+            m_ip = GetLocalAddress();
+
             m_socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             m_socket.Bind(new IPEndPoint(m_ip, m_port));
             m_socket.Listen(m_backlog);

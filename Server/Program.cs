@@ -203,8 +203,6 @@ namespace server_0._0._1
 
             // 初始化 Bmob
 
-
-
             MyConsole.Log("服务器初始化完成", /*"Program",*/ MyConsole.LogType.Debug);
         }
 
