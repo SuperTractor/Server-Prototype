@@ -19,7 +19,8 @@ using System.Diagnostics;
 //using cn.bmob.api;
 //using cn.bmob.config;
 using ConsoleUtility;
-using BmobInterface;
+//using BmobInterface;
+using DataBase;
 
 namespace server_0._0._1
 {
@@ -38,7 +39,7 @@ namespace server_0._0._1
         //static Player[] m_players;
         static List<PlayerInfo> m_players;
         // 从 Bmob 提取的玩家统计数据
-        static List<StatObject> m_userStats;
+        //static List<StatObject> m_userStats;
         //static StatObject m_userStat;
 
         // 游戏准备好开始了
@@ -131,11 +132,11 @@ namespace server_0._0._1
             Thread.CurrentThread.Name = "主线程";
 
             // 初始化 bmob 实例
-            BmobInstance.Initialize();
+            //BmobInstance.Initialize();
 
             //BmobInstance.Find("rocky");
             // 新建用户统计数据
-            m_userStats = new List<StatObject>();
+            //m_userStats = new List<StatObject>();
             //m_userStats.Add(new StatObject("Rocky"));
 
             // 设置命令行的编码为 utf8
@@ -223,10 +224,10 @@ namespace server_0._0._1
                 {
                     // 加入此玩家
                     m_players.Add(new PlayerInfo(comPlayer.name, comPlayer.id));
-                    // 加入此玩家的统计数据
-                    m_userStats.Add(new StatObject(comPlayer.name));
-                    // 将统计数据同步到玩家信息中
-                    m_userStats.Last().CopyTo(m_players.Last());
+                    //// 加入此玩家的统计数据
+                    //m_userStats.Add(new StatObject(comPlayer.name));
+                    //// 将统计数据同步到玩家信息中
+                    //m_userStats.Last().CopyTo(m_players.Last());
                 }
 
                 //m_players.Add(new PlayerInfo(comPlayer.name, comPlayer.id));
@@ -243,7 +244,7 @@ namespace server_0._0._1
                 {
                     // 移除掉线玩家
                     m_players.RemoveAll(player => player.name == name);
-                    m_userStats.RemoveAll(stat => stat.username == name);
+                    //m_userStats.RemoveAll(stat => stat.username == name);
                 }
             }
 
