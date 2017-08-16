@@ -4,9 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DataBase
+namespace Database
 {
     // 表单记录的基类
+    [Serializable]
     public class DataObject
     {
         // 一系列命名变量

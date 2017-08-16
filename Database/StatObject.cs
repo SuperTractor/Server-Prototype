@@ -4,11 +4,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DataBase
+namespace Database
 {
     /// <summary>
     /// 对应 stat 表单一个记录
     /// </summary>
+    /// 
+    [Serializable]
     public class StatObject : DataObject
     {
         public int score

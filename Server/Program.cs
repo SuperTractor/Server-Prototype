@@ -20,7 +20,7 @@ using System.Diagnostics;
 //using cn.bmob.config;
 using ConsoleUtility;
 //using BmobInterface;
-using DataBase;
+using Database;
 
 namespace server_0._0._1
 {

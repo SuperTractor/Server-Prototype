@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DataBase
+namespace Database
 {
     /// <summary>
     /// 为了避免表单一直放在内存，所有操作前，都应该重新加载表单，完成操作后，保存表单
