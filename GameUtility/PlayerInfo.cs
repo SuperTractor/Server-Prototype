@@ -43,6 +43,14 @@ namespace GameUtility
             cardInHand = new List<Card>();
         }
 
+        // 更新玩家统计信息
+        public void UpdateStat()
+        {
+            totalLevel += level;
+            totalScore += score;
+            highLevel = Math.Max(highLevel, level);
+            highScore = Math.Max(highScore, score);
+        }
 
 
     }

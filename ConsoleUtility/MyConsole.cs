@@ -40,5 +40,11 @@ namespace ConsoleUtility
             Console.WriteLine(log);
         }
 
+        // 默认是 DEBUG 模式输出
+        public static void Log(string message)
+        {
+            Log(message, LogType.Debug);
+        }
+
     }
 }

@@ -34,6 +34,12 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="DatabaseUtility">
+      <HintPath>..\Plugins\DatabaseUtility.dll</HintPath>
+    </Reference>
+    <Reference Include="DBNetworking">
+      <HintPath>..\Plugins\DBNetworking.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -46,6 +52,7 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="StatObject.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -54,10 +61,6 @@
     <ProjectReference Include="..\ConsoleUtility\ConsoleUtility.csproj">
       <Project>{0e121e75-a3be-4c4b-bf69-b7e23a169170}</Project>
       <Name>ConsoleUtility</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Database\Database.csproj">
-      <Project>{451b7635-2ecd-4a93-9052-9b1aa87de881}</Project>
-      <Name>Database</Name>
     </ProjectReference>
     <ProjectReference Include="..\GameUtility\GameUtility.csproj">
       <Project>{5c4c5817-3e7e-4596-a368-f0ac78f94438}</Project>

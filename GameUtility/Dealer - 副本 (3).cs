@@ -884,10 +884,7 @@ namespace GameUtility
         /// <returns>a大于b返回true，否则返回false,！！！！注意，返回false不一定代表a小于b，可能是a,b不在一个区间上</returns>
         bool biggerThan(int a, int b, int mainColor, int mainNumber)
         {
-            if (a == -1)
-                return false;
-            if (b == -1)
-                return true;
+            //  Console.WriteLine("a:" + a + "b:" + b);
             if (a == b)
                 return false;
             if (mainColor == 4)
@@ -950,7 +947,6 @@ namespace GameUtility
                 }
             }
         }
-
     }
 
     public class RulePlayer
@@ -971,17 +967,6 @@ namespace GameUtility
         {
             data = new int[54];
         }
-        public int Count
-        {
-            get
-            {
-                int tmp = 0;
-                for (int i = 0; i < 54; i++)
-                    tmp += data[i];
-                return tmp;
-            }
-        }
-            
     };
 
     public class Dealer
@@ -1103,8 +1088,6 @@ namespace GameUtility
         public List<Card>[] handOutCards;
         // 当前出牌最大玩家
         public int biggestPlayerId;
-        // 当前每个玩家的分数
-        public int[] score;
 
         // 当前盘数，出完手牌为 1 盘
         private int m_round = 1;
@@ -1120,10 +1103,6 @@ namespace GameUtility
         /// </summary>
         public Dealer()
         {
-            score = new int[4];
-            for (int i = 0; i < 4; i++)
-                score[i] = 0;
-
             m_totalCard = new Card[Card.cardNumberOfOnePack * packNumber];
             for (int i = 0; i < packNumber; i++)
             {
@@ -1355,7 +1334,7 @@ namespace GameUtility
         }
 
         // CardArray到CardList的转换
-        CardList ListCardToCardList(List<Card> res)
+        CardList CardListToCardList(List<Card> res)
         {
             CardList tmp = new CardList();
             foreach (Card j in res)
@@ -2043,7 +2022,7 @@ namespace GameUtility
         /// <param name="playCard">出的牌组</param>
         /// <returns></returns>
         public
-          Judgement canPlay(CardList firstCard, RulePlayer[] player, int thisplayer, bool lastRound)
+          Judgement canPlay(CardList firstCard, RulePlayer[] player, int thisplayer)
         {
             cardComb fc = new cardComb(firstCard, mainNumber, mainColor);
 
@@ -2055,7 +2034,6 @@ namespace GameUtility
                 return new Judgement("valid", true);
             else //甩牌咯
             {
-                if (lastRound) return new Judgement("invalid", false);
                 if (canThrow(firstCard, player, thisplayer))
                     return new Judgement("throw", true);
                 else
@@ -3184,7 +3162,7 @@ namespace GameUtility
                 case 1:
                     return new Judgement("notShot", true);
                 case 2:
-                    if (orderCompare(ListCardToCardList(handOutCards[biggestPlayerId]), playCard, handCard) <= 1)
+                    if (orderCompare(CardListToCardList(handOutCards[biggestPlayerId]), playCard, handCard) <= 1)
                         return new Judgement("notShot", true);
                     else
                         return new Judgement("shot", true);
@@ -3197,14 +3175,11 @@ namespace GameUtility
         {
             RulePlayer[] tmp = PlayerToRulePlayer(m_player);
             CardList playCard = CardArrayToCardList(cards);
-            CardList firstCard = ListCardToCardList(handOutCards[firstHomePlayerId]);
+            CardList firstCard = CardListToCardList(handOutCards[firstHomePlayerId]);
             if (currentPlayerId == firstHomePlayerId)
             {
                 biggestPlayerId = firstHomePlayerId;
-                if (playCard.Count == playersHandCard[currentPlayerId].Count)
-                    return canPlay(playCard, tmp, currentPlayerId, true);
-                else
-                    return canPlay(playCard, tmp, currentPlayerId, false);
+                return canPlay(playCard, tmp, currentPlayerId);
             }
             else
             {
@@ -3220,165 +3195,6 @@ namespace GameUtility
             //{
             //    return new Judgement("", cards.Length == dealRequiredLength);
             //}
-        }
-
-        /// <summary>
-        /// 计算每圈后的得分
-        /// </summary>
-        /// <param name="winner"></param>
-        /// <param name="tablescore"></param>
-        /// <param name="player"></param>
-        /// <returns></returns>
-        public void addScore()
-        {
-            for (int i = 0; i < 4; i++)
-                score[biggestPlayerId] += countScore(ListCardToCardList(handOutCards[i]));
-        }
-
-        /// <summary>
-        /// 计算一个CardList中含有的分数
-        /// </summary>
-        /// <param name="res"></param>
-        /// <returns></returns>
-        public int countScore(CardList res)
-        {
-            int score = 5 * (res.data[3] + res.data[16] + res.data[29] + res.data[42])
-                 + 10 * (res.data[8] + res.data[11] + res.data[21] + res.data[24] + res.data[34] + res.data[37] + res.data[47] + res.data[50]);
-            return score;
-        }
-
-        /// <summary>
-        /// 升级
-        /// </summary>
-        /// <param name="biggestPlayerId">当前圈出牌最大的玩家</param>
-        /// <param name="score">四个玩家的分数</param>
-        /// <param name="maxCard">当前圈出牌最大的牌面</param>
-        /// <param name="mainNumber">主级数</param>
-        /// <param name="mainColor">主花色</param>
-        public void addLevel()
-        {
-            CardList maxCard = ListCardToCardList(handOutCards[biggestPlayerId]);
-            //判断底牌分是否有效，并确定分数翻倍倍数
-            int bottomscore = countScore(CardArrayToCardList(bottom));
-            int totalscore = 0;   //闲家分数总和
-            for (int i = 0; i < 4; i++)
-            {
-                if (bankerPlayerId.Exists((int x) => x == i ? true : false) == false)
-                {
-                    totalscore += score[i];
-                }
-            }
-
-            cardComb maxcomb = new cardComb(maxCard, mainNumber, mainColor);
-
-            //判断是否为主牌,是主牌则有底牌分
-            if (maxcomb.thisColor == mainColor)
-            {
-                //闲家拿底牌则加分
-                if (bankerPlayerId.Exists((int x) => x == biggestPlayerId ? true : false) == false)
-                    totalscore += maxcomb.Count * 4 * bottomscore;
-                //庄家拿底牌则减分
-                else
-                    totalscore -= maxcomb.Count * 4 * bottomscore;
-                int rank = 0;
-                totalscore -= 160;
-                rank = System.Math.Abs(totalscore) / 80;
-                m_upperPlayersId = null;
-                m_upperPlayersId = new int[4];
-                if (totalscore > 0)
-                {
-                    for (int i = 0; i < 4; i++)
-                        if (bankerPlayerId.Exists((int x) => x == i ? true : false) == false)
-                        {
-                            playerLevels[i] += rank;
-                            m_upperPlayersId[m_upperPlayersId.Length] = i;
-                        }
-
-                }
-                else
-                {
-                    for (int i = 0; i < 4; i++)
-                        if (bankerPlayerId.Exists((int x) => x == i ? true : false) == true)
-                        {
-                            playerLevels[i] += rank;
-                            m_upperPlayersId[m_upperPlayersId.Length] = i;
-                        }
-                }
-
-            }
-            //无底牌分时升级方法
-            else
-            {
-                totalscore -= 160;
-                int rank = System.Math.Abs(totalscore) / 80 + 1;
-                m_upperPlayersId = null;
-                m_upperPlayersId = new int[4];
-                if (totalscore == 0)
-                {
-                    for (int i = 0; i < 4; i++)
-                        if (bankerPlayerId.Exists((int x) => x == i ? true : false) == true)
-                        {
-                            playerLevels[i] += 4;
-                            m_upperPlayersId[m_upperPlayersId.Length] = i;
-                        }
-                }
-                else if (totalscore < 80)
-                {
-                    for (int i = 0; i < 4; i++)
-                        if (bankerPlayerId.Exists((int x) => x == i ? true : false) == true)
-                        {
-                            playerLevels[i] += 2;
-                            m_upperPlayersId[m_upperPlayersId.Length] = i;
-                        }
-                }
-                else if (totalscore < 160)
-                {
-                    for (int i = 0; i < 4; i++)
-                        if (bankerPlayerId.Exists((int x) => x == i ? true : false) == true)
-                        {
-                            playerLevels[i] += 1;
-                            m_upperPlayersId[m_upperPlayersId.Length] = i;
-                        }
-                }
-                else if (totalscore < 240)
-                {
-                    for (int i = 0; i < 4; i++)
-                        if (bankerPlayerId.Exists((int x) => x == i ? true : false) == false)
-                        {
-                            m_upperPlayersId[m_upperPlayersId.Length] = i;
-                        }
-                }
-                else if (totalscore < 320)
-                {
-                    for (int i = 0; i < 4; i++)
-                        if (bankerPlayerId.Exists((int x) => x == i ? true : false) == false)
-                        {
-                            playerLevels[i] += 1;
-                            m_upperPlayersId[m_upperPlayersId.Length] = i;
-                        }
-                }
-                else if (totalscore < 400)
-                {
-                    for (int i = 0; i < 4; i++)
-                        if (bankerPlayerId.Exists((int x) => x == i ? true : false) == false)
-                        {
-                            playerLevels[i] += 2;
-                            m_upperPlayersId[m_upperPlayersId.Length] = i;
-                        }
-                }
-                else if (totalscore == 400)
-                {
-                    for (int i = 0; i < 4; i++)
-                        if (bankerPlayerId.Exists((int x) => x == i ? true : false) == false)
-                        {
-                            playerLevels[i] += 4;
-                            m_upperPlayersId[m_upperPlayersId.Length] = i;
-                        }
-                }
-
-            }
-
-
         }
 
         public void SetCurrentPlayerId(int id)

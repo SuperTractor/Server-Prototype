@@ -20,7 +20,9 @@ using System.Diagnostics;
 //using cn.bmob.config;
 using ConsoleUtility;
 //using BmobInterface;
-using Database;
+//using Database;
+using DatabaseUtility;
+using DBNetworking;
 
 namespace server_0._0._1
 {
@@ -125,6 +127,10 @@ namespace server_0._0._1
         }
 
 
+        // 统计信息表名
+        static string statTableName = "stat";
+
+
         //// 网络通信线程的事件
         //static ManualResetEvent[] m_comServerEvents;
         static void Initialize()
@@ -142,6 +148,12 @@ namespace server_0._0._1
             // 设置命令行的编码为 utf8
             Console.OutputEncoding = Encoding.Unicode;
             playersIsConnected = new bool[Dealer.playerNumber];
+
+            // 初始化数据库客户端
+            DBClient.RegisterLogger(MyConsole.Log);
+            DBClient.Initialize();
+            DBClient.Connect();
+
 
             // 初始化 ComServer
             ComServer.Initialize(Dealer.playerNumber, m_roomSize, m_doneGameLoopEvent);
@@ -207,6 +219,7 @@ namespace server_0._0._1
             MyConsole.Log("服务器初始化完成", /*"Program",*/ MyConsole.LogType.Debug);
         }
 
+
         // 准备开始游戏
         // 带等候区的玩家进入房间
         static void GetReady()
@@ -231,6 +244,25 @@ namespace server_0._0._1
                 //}
 
                 m_players.Add(new PlayerInfo(comPlayer.name, comPlayer.id));
+
+                // 从数据库中获取该用户的信息
+                DataObject dataObj = DBClient.Find(statTableName, comPlayer.name);
+                StatObject statObj;
+                // 如果没有记录，说明这是一个新用户
+                if (dataObj == null)
+                {
+                    statObj = new StatObject();
+                    statObj.username = comPlayer.name;
+                    // 更新到数据库
+                    DBClient.Update(statTableName, statObj);
+                }
+                // 如果有记录，老玩家了
+                else
+                {
+                    statObj = new StatObject(dataObj);
+                }
+                // 更新到玩家信息当中
+                statObj.CopyTo(m_players.Last());
             }
             //// 对每一个主程序中的玩家
             //for (int i = 0; i < m_players.Count; i++)
@@ -1298,6 +1330,17 @@ namespace server_0._0._1
                         // 必须保证首家 ID 已经确定了，才能更新下一出牌玩家 ID
                         m_dealer.UpdateNextPlayer();
 
+                        //// 如果最后一个玩家出牌
+                        //if (m_dealer.handOutPlayerCount == 0)
+                        //{
+                        //    // 标志需要 1 次延时
+                        //    m_doneClearPlayCardDelay = false;
+                        //    // 清空荷官中存储的本轮玩家出牌
+                        //    m_dealer.ClearHandOutCards();
+                        //    // 进入下一轮出牌
+                        //    m_dealer.circle++;
+                        //}
+
                         // 如果最后一个玩家出牌
                         if (m_dealer.handOutPlayerCount == 0)
                         {
@@ -1307,7 +1350,13 @@ namespace server_0._0._1
                             m_dealer.ClearHandOutCards();
                             // 进入下一轮出牌
                             m_dealer.circle++;
+                            // 最后一轮
+                            if (m_dealer.AllPlayersHandEmpty())
+                                m_dealer.addLevel();
+                            else
+                                m_dealer.addScore();
                         }
+
                         // 标志可以开始为下一玩家出牌思考计时
                         m_isOkCountDown = true;
                     }
@@ -1364,6 +1413,19 @@ namespace server_0._0._1
 
         }
 
+        // 将玩家信息统计之后更新到数据库服务器
+        static void UpdatePlayerStats()
+        {
+            for(int i = 0; i < m_players.Count; i++)
+            {
+                m_players[i].UpdateStat();
+                StatObject statObj = new StatObject();
+                statObj.CopyFrom(m_players[i]);
+                // 更新数据到数据库服务器
+                DBClient.Update(statTableName, statObj);
+            }
+        }
+
         static void Score2Deal()
         {
             // 计分结束，盘数增加
@@ -1376,6 +1438,9 @@ namespace server_0._0._1
 
             // 清空庄家 ID
             m_dealer.bankerPlayerId.Clear();
+
+            // 将玩家信息统计之后更新到数据库服务器
+            UpdatePlayerStats();
         }
 
         // 更新荷官需要掌握的信息
