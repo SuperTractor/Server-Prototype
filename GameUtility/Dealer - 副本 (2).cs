@@ -26,7 +26,7 @@ namespace GameUtility
         public
           CardList raw; // 原始数据
         public
-          List<int> maxtractor;  //最长拖拉机，仅在甩牌时有值
+  List<int> maxtractor;  //最长拖拉机，仅在甩牌时有值
         public
           int TransFromCardList(int a)
         {
@@ -36,9 +36,6 @@ namespace GameUtility
           cardComb(CardList init, int mn, int mc)
         {
             Count = 0;
-            for (int i=0; i<54; i++)
-                Count += init.data[i];
-
             maxtractor = null;
             raw = init;
             valid = true;
@@ -51,8 +48,9 @@ namespace GameUtility
             bool mainOccur = false;
             int count = 0;
             if (mainColor == 4)
-            { 
-                 for (int i = 0; i < 4; i++)
+            {
+
+                for (int i = 0; i < 4; i++)
                     for (int j = i * 13; j < (i + 1) * 13; j++)
                     {
                         if (init.data[j] > 0)
@@ -127,6 +125,8 @@ namespace GameUtility
             for (int i = 0; i < 54; i++)
                 if (init.data[i] > 0)
                 {
+                    for (int j = 0; j < init.data[i]; j++)
+                        Count++; // 计算总牌数
                     if (oc[init.data[i]])
                     {
                         if (init.data[i] == 1)
@@ -187,8 +187,8 @@ namespace GameUtility
                         if (i - thisColor * 13 != mainNumber)
                             if (init.data[i] > 0)
                             {
-                                int temp = i - 1;
-                                if (temp % 13 == mainNumber)
+                                int temp = i - 1 - thisColor * 13;
+                                if (temp == mainNumber)
                                     temp--;
                                 if (temp > 0 && init.data[temp] == 0 && flag)
                                 {
@@ -209,8 +209,8 @@ namespace GameUtility
                         if (i - thisColor * 13 != mainNumber)
                             if (init.data[i] > 0)
                             {
-                                int temp = i - 1;
-                                if (temp % 13 == mainNumber)
+                                int temp = i - 1 - thisColor * 13;
+                                if (temp == mainNumber)
                                     temp--;
                                 if (temp > 0 && init.data[temp] == 0 && flag)
                                 {
@@ -227,7 +227,7 @@ namespace GameUtility
                         if (i != mainColor && init.data[i * 13 + mainNumber] > 0)
                         {
                             viceOccurFlag = true;
-                            int temp = data[data.Count() - 1] % 13;
+                            int temp = init.data[init.data.Count() - 1] % 13;
                             if (flag && ((temp != 11 && mainNumber == 12) || (temp != 12 && mainNumber != 12)))
                             {
                                 thrown = true;
@@ -287,8 +287,8 @@ namespace GameUtility
                         if (i - thisColor * 13 != mainNumber)
                             if (init.data[i] > 0)
                             {
-                                int temp = i - 1;
-                                if (temp % 13 == mainNumber)
+                                int temp = i - 1 - thisColor * 13;
+                                if (temp == mainNumber)
                                     temp--;
                                 if (temp > 0 && init.data[temp] == 0 && flag)
                                 {
@@ -349,51 +349,17 @@ namespace GameUtility
                         else
                         {
                             //如果拖拉机长度大于等于k且最大牌较大,则将最大的k张牌赋值到maxtractor中
-                            maxtractor.Clear();
-                            if (maxtractor.Count() > 0)
+                            if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                             {
-                                if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                                {
-                                    for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                    {
-                                        maxtractor.Add(currenttractor.ElementAt(t));
-                                    }
-                                }
+                                maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                             }
-                            else
-                            {
-                                if (currenttractor.Count() >= k)
-                                {
-                                    for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                    {
-                                        maxtractor.Add(currenttractor.ElementAt(t));
-                                    }
 
-                                }
-                            }
-                            currenttractor.Clear();
                         }
 
                     }
-                    if (maxtractor.Count() > 0)
+                    if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                     {
-                        if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                        {
-                            for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                            {
-                                maxtractor.Add(currenttractor.ElementAt(t));
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (currenttractor.Count() >= k)
-                        {
-                            for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                            {
-                                maxtractor.Add(currenttractor.ElementAt(t));
-                            }
-                        }
+                        maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                     }
                 }
                 else
@@ -404,52 +370,19 @@ namespace GameUtility
                             if (temp.data[i] > 1)
                             {
                                 currenttractor.Add(i);
+
                             }
                             else
                             {
-                                maxtractor.Clear();
-                                if (maxtractor.Count() > 0)
+                                if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                                 {
-                                    if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                                    {
-                                        for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                        {
-                                            maxtractor.Add(currenttractor.ElementAt(t));
-                                        }
-                                    }
+                                    maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                                 }
-                                else
-                                {
-                                    if (currenttractor.Count() >= k)
-                                    {
-                                        for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                        {
-                                            maxtractor.Add(currenttractor.ElementAt(t));
-                                        }
 
-                                    }
-                                }
-                                currenttractor.Clear();
                             }
-                    if (maxtractor.Count() > 0)
+                    if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                     {
-                        if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                        {
-                            for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                            {
-                                maxtractor.Add(currenttractor.ElementAt(t));
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (currenttractor.Count() >= k)
-                        {
-                            for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                            {
-                                maxtractor.Add(currenttractor.ElementAt(t));
-                            }
-                        }
+                        maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                     }
 
                 }
@@ -468,29 +401,10 @@ namespace GameUtility
                             }
                             else
                             {
-                                maxtractor.Clear();
-                                if (maxtractor.Count() > 0)
+                                if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                                 {
-                                    if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                                    {
-                                        for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                        {
-                                            maxtractor.Add(currenttractor.ElementAt(t));
-                                        }
-                                    }
+                                    maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                                 }
-                                else
-                                {
-                                    if (currenttractor.Count() >= k)
-                                    {
-                                        for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                        {
-                                            maxtractor.Add(currenttractor.ElementAt(t));
-                                        }
-
-                                    }
-                                }
-                                currenttractor.Clear();
 
                             }
                     // 副主级牌
@@ -506,29 +420,10 @@ namespace GameUtility
                             else
                             {
 
-                                maxtractor.Clear();
-                                if (maxtractor.Count() > 0)
+                                if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                                 {
-                                    if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                                    {
-                                        for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                        {
-                                            maxtractor.Add(currenttractor.ElementAt(t));
-                                        }
-                                    }
+                                    maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                                 }
-                                else
-                                {
-                                    if (currenttractor.Count() >= k)
-                                    {
-                                        for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                        {
-                                            maxtractor.Add(currenttractor.ElementAt(t));
-                                        }
-
-                                    }
-                                }
-                                currenttractor.Clear();
 
                             }
                         }
@@ -540,30 +435,10 @@ namespace GameUtility
                     }
                     else
                     {
-                        maxtractor.Clear();
-                        if (maxtractor.Count() > 0)
+                        if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                         {
-                            if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                            {
-                                for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                {
-                                    maxtractor.Add(currenttractor.ElementAt(t));
-                                }
-                            }
+                            maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                         }
-                        else
-                        {
-                            if (currenttractor.Count() >= k)
-                            {
-                                for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                {
-                                    maxtractor.Add(currenttractor.ElementAt(t));
-                                }
-
-                            }
-                        }
-                        currenttractor.Clear();
-
                     }
 
 
@@ -578,53 +453,17 @@ namespace GameUtility
                         }
                         else
                         {
-                            maxtractor.Clear();
-                            if (maxtractor.Count() > 0)
+                            if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                             {
-                                if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                                {
-                                    for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                    {
-                                        maxtractor.Add(currenttractor.ElementAt(t));
-                                    }
-                                }
+                                maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                             }
-                            else
-                            {
-                                if (currenttractor.Count() >= k)
-                                {
-                                    for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                    {
-                                        maxtractor.Add(currenttractor.ElementAt(t));
-                                    }
-
-                                }
-                            }
-                            currenttractor.Clear();
-
 
                         }
 
                     }
-                    if (maxtractor.Count() > 0)
+                    if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                     {
-                        if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                        {
-                            for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                            {
-                                maxtractor.Add(currenttractor.ElementAt(t));
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (currenttractor.Count() >= k)
-                        {
-                            for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                            {
-                                maxtractor.Add(currenttractor.ElementAt(t));
-                            }
-                        }
+                        maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                     }
                 }
                 else
@@ -639,59 +478,23 @@ namespace GameUtility
                             }
                             else
                             {
-                                maxtractor.Clear();
-                                if (maxtractor.Count() > 0)
+                                if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                                 {
-                                    if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                                    {
-                                        for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                        {
-                                            maxtractor.Add(currenttractor.ElementAt(t));
-                                        }
-                                    }
+                                    maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                                 }
-                                else
-                                {
-                                    if (currenttractor.Count() >= k)
-                                    {
-                                        for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                        {
-                                            maxtractor.Add(currenttractor.ElementAt(t));
-                                        }
-
-                                    }
-                                }
-                                currenttractor.Clear();
-
 
                             }
-                    if (maxtractor.Count() > 0)
+                    if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                     {
-                        if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                        {
-                            for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                            {
-                                maxtractor.Add(currenttractor.ElementAt(t));
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (currenttractor.Count() >= k)
-                        {
-                            for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                            {
-                                maxtractor.Add(currenttractor.ElementAt(t));
-                            }
-                        }
+                        maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                     }
 
                 }
             }
+
             return maxtractor;
 
         }
-
         /// <summary>
         /// 找出最长的拖拉机
         /// </summary>
@@ -721,20 +524,14 @@ namespace GameUtility
                         }
                         else
                         {
-                            if (currenttractor.Count() > maxtractor.Count())
-                            {
-                                currenttractor.ForEach(a => maxtractor.Add(a));
-                                currenttractor.Clear();
-                            }
+                            maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                            currenttractor.Clear();
 
                         }
 
                     }
-                    if (currenttractor.Count() > maxtractor.Count())
-                    {
-                        currenttractor.ForEach(a => maxtractor.Add(a));
-                        currenttractor.Clear();
-                    }
+                    maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                    currenttractor.Clear();
                 }
                 else
                 {
@@ -748,18 +545,12 @@ namespace GameUtility
                             }
                             else
                             {
-                                if (currenttractor.Count() > maxtractor.Count())
-                                {
-                                    currenttractor.ForEach(a => maxtractor.Add(a));
-                                    currenttractor.Clear();
-                                }
+                                maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                                currenttractor.Clear();
 
                             }
-                    if (currenttractor.Count() > maxtractor.Count())
-                    {
-                        currenttractor.ForEach(a => maxtractor.Add(a));
-                        currenttractor.Clear();
-                    }
+                    maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                    currenttractor.Clear();
 
                 }
             }
@@ -777,11 +568,8 @@ namespace GameUtility
                             }
                             else
                             {
-                                if (currenttractor.Count() > maxtractor.Count())
-                                {
-                                    currenttractor.ForEach(a => maxtractor.Add(a));
-                                    currenttractor.Clear();
-                                }
+                                maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                                currenttractor.Clear();
 
                             }
                     // 副主级牌
@@ -796,11 +584,10 @@ namespace GameUtility
                             }
                             else
                             {
-                                if (currenttractor.Count() > maxtractor.Count())
-                                {
-                                    currenttractor.ForEach(a => maxtractor.Add(a));
-                                    currenttractor.Clear();
-                                }
+
+                                maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                                currenttractor.Clear();
+
                             }
                         }
                     // 主级牌
@@ -811,11 +598,8 @@ namespace GameUtility
                     }
                     else
                     {
-                        if (currenttractor.Count() > maxtractor.Count())
-                        {
-                            currenttractor.ForEach(a => maxtractor.Add(a));
-                            currenttractor.Clear();
-                        }
+                        maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                        currenttractor.Clear();
                     }
 
 
@@ -830,19 +614,14 @@ namespace GameUtility
                         }
                         else
                         {
-                            if (currenttractor.Count() > maxtractor.Count())
-                            {
-                                currenttractor.ForEach(a => maxtractor.Add(a));
-                                currenttractor.Clear();
-                            }
+                            maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                            currenttractor.Clear();
+
                         }
 
                     }
-                    if (currenttractor.Count() > maxtractor.Count())
-                    {
-                        currenttractor.ForEach(a => maxtractor.Add(a));
-                        currenttractor.Clear();
-                    }
+                    maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                    currenttractor.Clear();
                 }
                 else
                 {
@@ -856,18 +635,12 @@ namespace GameUtility
                             }
                             else
                             {
-                                if (currenttractor.Count() > maxtractor.Count())
-                                {
-                                    currenttractor.ForEach(a => maxtractor.Add(a));
-                                    currenttractor.Clear();
-                                }
+                                maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                                currenttractor.Clear();
 
                             }
-                    if (currenttractor.Count() > maxtractor.Count())
-                    {
-                        currenttractor.ForEach(a => maxtractor.Add(a));
-                        currenttractor.Clear();
-                    }
+                    maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                    currenttractor.Clear();
 
                 }
             }
@@ -881,70 +654,68 @@ namespace GameUtility
         /// <param name="b">牌2，用54个数字表示</param>
         /// <param name="mainColor"></param>
         /// <param name="mainNumber"></param>
-        /// <returns>a大于b返回true，否则返回false,！！！！注意，返回false不一定代表a小于b，可能是a,b不在一个区间上</returns>
+        /// <returns>a>b返回true，否则返回false</returns>
         bool biggerThan(int a, int b, int mainColor, int mainNumber)
         {
-            //  Console.WriteLine("a:" + a + "b:" + b);
+            if (a == -1)
+                return false;
+            if (b == -1)
+                return true;
             if (a == b)
                 return false;
             if (mainColor == 4)
             {
-                //主牌
-                if (a == 53 || a == 52 || a % 13 == mainNumber)
-                {
-                    if (b == 53 || b == 52 || b % 13 == mainNumber)
-                    {
-                        if (a == 53 || (a == 52 && b != 53))
-                            return true;
-                        else
-                            return false;
-                    }
-                    else
-                        return false;
-                }
-                else//副牌
-                {
-                    if (b == 53 || b == 52 || b % 13 == mainNumber)
-                        return false;
-                    else
-                    {
-                        //同一花色
-                        if ((int)a / 13 == (int)b / 13 && a % 13 > b % 13)
-                            return true;
-                        else
-                            return false;
-                    }
-                }
+                // 大小王
+                if (a == 53 || (a == 52 && b != 53))
+                    return true;
+                if (b == 53 || (b == 52 && a != 53))
+                    return false;
+                // 主级牌
+                if (a % 13 == mainNumber && b % 13 == mainNumber)
+                    return false;
+                if (a % 13 == mainNumber && b % 13 != mainNumber)
+                    return true;
+                if (a % 13 != mainNumber && b % 13 == mainNumber)
+                    return false;
+                // 副牌
+                if (a % 13 > b % 13)
+                    return true;
+                else
+                    return false;
             }
             else // 有主
             {
+                // 大小王
+                if (a == 53 || (a == 52 && b != 53))
+                    return true;
+                if (b == 53 || (b == 52 && a != 53))
+                    return false;
                 // 主级牌
-                if (a == 53 || a == 52 || a % 13 == mainNumber || (int)a / 13 == mainColor)
-                {
-                    if (b == 53 || b == 52 || b % 13 == mainNumber || (int)b / 13 == mainColor)
+                if (b % 13 == mainNumber && b / 13 == mainColor)
+                    return false;
+                if (a % 13 == mainNumber && a / 13 == mainColor)
+                    return true;
+                // 副主级牌
+                if (b % 13 == mainNumber && b / 13 != mainColor)
+                    return false;
+                if (a % 13 == mainNumber && a / 13 != mainColor)
+                    return true;
+                //主花色牌
+                if (a / 13 == mainColor)
+                    if (b / 13 == mainColor)
                     {
-                        if (a == 53 || (a == 52 && b != 53) || (a % 13 == mainNumber && (int)a / 13 == mainColor && b < 52)
-                            || (a % 13 == mainNumber && (int)a / 13 != mainColor && b % 13 != mainNumber && (int)b / 13 == mainColor)
-                            || (a % 13 != mainNumber && (int)a / 13 == mainColor && b % 13 != mainNumber && (int)b / 13 == mainColor && a > b))
+                        if (a % 13 > b % 13)
                             return true;
                         else
                             return false;
                     }
                     else
-                        return false;
-                }
+                        return true;
+                // 副牌
+                if (a % 13 > b % 13)
+                    return true;
                 else
-                {
-                    if (b == 53 || b == 52 || b % 13 == mainNumber || (int)b / 13 == mainColor)
-                        return false;
-                    else
-                    {
-                        if ((int)a / 13 == (int)b / 13 && a % 13 > b % 13)
-                            return true;
-                        else
-                            return false;
-                    }
-                }
+                    return false;
             }
         }
     }
@@ -1086,8 +857,6 @@ namespace GameUtility
         }
         // 4 个玩家本轮的出牌
         public List<Card>[] handOutCards;
-        // 当前出牌最大玩家
-        public int biggestPlayerId;
 
         // 当前盘数，出完手牌为 1 盘
         private int m_round = 1;
@@ -1446,51 +1215,17 @@ namespace GameUtility
                         else
                         {
                             //如果拖拉机长度大于等于k且最大牌较大,则将最大的k张牌赋值到maxtractor中
-                            maxtractor.Clear();
-                            if (maxtractor.Count() > 0)
+                            if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                             {
-                                if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                                {
-                                    for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                    {
-                                        maxtractor.Add(currenttractor.ElementAt(t));
-                                    }
-                                }
+                                maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                             }
-                            else
-                            {
-                                if (currenttractor.Count() >= k)
-                                {
-                                    for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                    {
-                                        maxtractor.Add(currenttractor.ElementAt(t));
-                                    }
 
-                                }
-                            }
-                            currenttractor.Clear();
                         }
 
                     }
-                    if (maxtractor.Count() > 0)
+                    if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                     {
-                        if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                        {
-                            for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                            {
-                                maxtractor.Add(currenttractor.ElementAt(t));
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (currenttractor.Count() >= k)
-                        {
-                            for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                            {
-                                maxtractor.Add(currenttractor.ElementAt(t));
-                            }
-                        }
+                        maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                     }
                 }
                 else
@@ -1501,52 +1236,19 @@ namespace GameUtility
                             if (temp.data[i] > 1)
                             {
                                 currenttractor.Add(i);
+
                             }
                             else
                             {
-                                maxtractor.Clear();
-                                if (maxtractor.Count() > 0)
+                                if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                                 {
-                                    if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                                    {
-                                        for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                        {
-                                            maxtractor.Add(currenttractor.ElementAt(t));
-                                        }
-                                    }
+                                    maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                                 }
-                                else
-                                {
-                                    if (currenttractor.Count() >= k)
-                                    {
-                                        for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                        {
-                                            maxtractor.Add(currenttractor.ElementAt(t));
-                                        }
 
-                                    }
-                                }
-                                currenttractor.Clear();
                             }
-                    if (maxtractor.Count() > 0)
+                    if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                     {
-                        if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                        {
-                            for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                            {
-                                maxtractor.Add(currenttractor.ElementAt(t));
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (currenttractor.Count() >= k)
-                        {
-                            for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                            {
-                                maxtractor.Add(currenttractor.ElementAt(t));
-                            }
-                        }
+                        maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                     }
 
                 }
@@ -1565,29 +1267,10 @@ namespace GameUtility
                             }
                             else
                             {
-                                maxtractor.Clear();
-                                if (maxtractor.Count() > 0)
+                                if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                                 {
-                                    if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                                    {
-                                        for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                        {
-                                            maxtractor.Add(currenttractor.ElementAt(t));
-                                        }
-                                    }
+                                    maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                                 }
-                                else
-                                {
-                                    if (currenttractor.Count() >= k)
-                                    {
-                                        for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                        {
-                                            maxtractor.Add(currenttractor.ElementAt(t));
-                                        }
-
-                                    }
-                                }
-                                currenttractor.Clear();
 
                             }
                     // 副主级牌
@@ -1603,29 +1286,10 @@ namespace GameUtility
                             else
                             {
 
-                                maxtractor.Clear();
-                                if (maxtractor.Count() > 0)
+                                if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                                 {
-                                    if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                                    {
-                                        for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                        {
-                                            maxtractor.Add(currenttractor.ElementAt(t));
-                                        }
-                                    }
+                                    maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                                 }
-                                else
-                                {
-                                    if (currenttractor.Count() >= k)
-                                    {
-                                        for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                        {
-                                            maxtractor.Add(currenttractor.ElementAt(t));
-                                        }
-
-                                    }
-                                }
-                                currenttractor.Clear();
 
                             }
                         }
@@ -1637,30 +1301,10 @@ namespace GameUtility
                     }
                     else
                     {
-                        maxtractor.Clear();
-                        if (maxtractor.Count() > 0)
+                        if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                         {
-                            if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                            {
-                                for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                {
-                                    maxtractor.Add(currenttractor.ElementAt(t));
-                                }
-                            }
+                            maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                         }
-                        else
-                        {
-                            if (currenttractor.Count() >= k)
-                            {
-                                for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                {
-                                    maxtractor.Add(currenttractor.ElementAt(t));
-                                }
-
-                            }
-                        }
-                        currenttractor.Clear();
-
                     }
 
 
@@ -1675,53 +1319,17 @@ namespace GameUtility
                         }
                         else
                         {
-                            maxtractor.Clear();
-                            if (maxtractor.Count() > 0)
+                            if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                             {
-                                if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                                {
-                                    for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                    {
-                                        maxtractor.Add(currenttractor.ElementAt(t));
-                                    }
-                                }
+                                maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                             }
-                            else
-                            {
-                                if (currenttractor.Count() >= k)
-                                {
-                                    for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                    {
-                                        maxtractor.Add(currenttractor.ElementAt(t));
-                                    }
-
-                                }
-                            }
-                            currenttractor.Clear();
-
 
                         }
 
                     }
-                    if (maxtractor.Count() > 0)
+                    if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                     {
-                        if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                        {
-                            for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                            {
-                                maxtractor.Add(currenttractor.ElementAt(t));
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (currenttractor.Count() >= k)
-                        {
-                            for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                            {
-                                maxtractor.Add(currenttractor.ElementAt(t));
-                            }
-                        }
+                        maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                     }
                 }
                 else
@@ -1736,59 +1344,23 @@ namespace GameUtility
                             }
                             else
                             {
-                                maxtractor.Clear();
-                                if (maxtractor.Count() > 0)
+                                if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                                 {
-                                    if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                                    {
-                                        for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                        {
-                                            maxtractor.Add(currenttractor.ElementAt(t));
-                                        }
-                                    }
+                                    maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                                 }
-                                else
-                                {
-                                    if (currenttractor.Count() >= k)
-                                    {
-                                        for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                                        {
-                                            maxtractor.Add(currenttractor.ElementAt(t));
-                                        }
-
-                                    }
-                                }
-                                currenttractor.Clear();
-
 
                             }
-                    if (maxtractor.Count() > 0)
+                    if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
                     {
-                        if (currenttractor.Count() >= k && biggerThan(currenttractor.Last(), maxtractor.Last(), mainColor, mainNumber))
-                        {
-                            for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                            {
-                                maxtractor.Add(currenttractor.ElementAt(t));
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (currenttractor.Count() >= k)
-                        {
-                            for (int t = currenttractor.Count() - k; t < maxtractor.Count(); t++)
-                            {
-                                maxtractor.Add(currenttractor.ElementAt(t));
-                            }
-                        }
+                        maxtractor = (List<int>)currenttractor.Skip(Math.Max(0, currenttractor.Count() - k)).Take(k);
                     }
 
                 }
             }
+
             return maxtractor;
 
         }
-
         /// <summary>
         /// 找出最长的拖拉机
         /// </summary>
@@ -1818,20 +1390,14 @@ namespace GameUtility
                         }
                         else
                         {
-                            if (currenttractor.Count() > maxtractor.Count())
-                            {
-                                currenttractor.ForEach(a => maxtractor.Add(a));
-                                currenttractor.Clear();
-                            }
+                            maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                            currenttractor.Clear();
 
                         }
 
                     }
-                    if (currenttractor.Count() > maxtractor.Count())
-                    {
-                        currenttractor.ForEach(a => maxtractor.Add(a));
-                        currenttractor.Clear();
-                    }
+                    maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                    currenttractor.Clear();
                 }
                 else
                 {
@@ -1845,18 +1411,12 @@ namespace GameUtility
                             }
                             else
                             {
-                                if (currenttractor.Count() > maxtractor.Count())
-                                {
-                                    currenttractor.ForEach(a => maxtractor.Add(a));
-                                    currenttractor.Clear();
-                                }
+                                maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                                currenttractor.Clear();
 
                             }
-                    if (currenttractor.Count() > maxtractor.Count())
-                    {
-                        currenttractor.ForEach(a => maxtractor.Add(a));
-                        currenttractor.Clear();
-                    }
+                    maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                    currenttractor.Clear();
 
                 }
             }
@@ -1874,11 +1434,8 @@ namespace GameUtility
                             }
                             else
                             {
-                                if (currenttractor.Count() > maxtractor.Count())
-                                {
-                                    currenttractor.ForEach(a => maxtractor.Add(a));
-                                    currenttractor.Clear();
-                                }
+                                maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                                currenttractor.Clear();
 
                             }
                     // 副主级牌
@@ -1893,11 +1450,10 @@ namespace GameUtility
                             }
                             else
                             {
-                                if (currenttractor.Count() > maxtractor.Count())
-                                {
-                                    currenttractor.ForEach(a => maxtractor.Add(a));
-                                    currenttractor.Clear();
-                                }
+
+                                maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                                currenttractor.Clear();
+
                             }
                         }
                     // 主级牌
@@ -1908,11 +1464,8 @@ namespace GameUtility
                     }
                     else
                     {
-                        if (currenttractor.Count() > maxtractor.Count())
-                        {
-                            currenttractor.ForEach(a => maxtractor.Add(a));
-                            currenttractor.Clear();
-                        }
+                        maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                        currenttractor.Clear();
                     }
 
 
@@ -1927,19 +1480,14 @@ namespace GameUtility
                         }
                         else
                         {
-                            if (currenttractor.Count() > maxtractor.Count())
-                            {
-                                currenttractor.ForEach(a => maxtractor.Add(a));
-                                currenttractor.Clear();
-                            }
+                            maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                            currenttractor.Clear();
+
                         }
 
                     }
-                    if (currenttractor.Count() > maxtractor.Count())
-                    {
-                        currenttractor.ForEach(a => maxtractor.Add(a));
-                        currenttractor.Clear();
-                    }
+                    maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                    currenttractor.Clear();
                 }
                 else
                 {
@@ -1953,18 +1501,12 @@ namespace GameUtility
                             }
                             else
                             {
-                                if (currenttractor.Count() > maxtractor.Count())
-                                {
-                                    currenttractor.ForEach(a => maxtractor.Add(a));
-                                    currenttractor.Clear();
-                                }
+                                maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                                currenttractor.Clear();
 
                             }
-                    if (currenttractor.Count() > maxtractor.Count())
-                    {
-                        currenttractor.ForEach(a => maxtractor.Add(a));
-                        currenttractor.Clear();
-                    }
+                    maxtractor = currenttractor.Count() > maxtractor.Count() ? currenttractor : maxtractor;
+                    currenttractor.Clear();
 
                 }
             }
@@ -1980,34 +1522,82 @@ namespace GameUtility
         /// <returns>false不合法，true合法</returns>
         bool canThrow(CardList firstCard, RulePlayer[] player, int thisplayer)
         {
+            List<int> maxtractor = new List<int>();
+            List<int> currenttractor = new List<int>();
+            List<int>[] maxother = new List<int>[4];
             cardComb fc = new cardComb(firstCard, mainNumber, mainColor);
+
             if (!fc.valid)
                 return false;
 
-            int minf = -1;//当前玩家最小牌minf
-
-            for (int i = 0; i < 54; i++)
+            //找出所有拖拉机
+            while (true)
             {
-                if (firstCard.data[i] > 0)
-                    if (minf == -1) minf = i;
-                    else
-                        minf = biggerThan(minf, i, mainColor, mainNumber) ? i : minf; //此时fc.valid=true，不用担心biggerthan返回false时表示i和minf不在一个区间                                                                                    
-            }
-            for (int p = 0; p < 4; p++)
-            {
-                if (p != thisplayer)
+                maxtractor.Clear();
+                currenttractor.Clear();
+                //找出最长拖拉机
+                maxtractor = longtractor(firstCard, fc.thisColor, mainColor, mainNumber);
+                int length = maxtractor.Count();
+                //若为拖拉机，先比较合法性
+                if (length > 1)
                 {
-                    for (int j = 0; j < 54; j++)
+                    int p = 0;
+                    for (p = 0; p < 4; p++)
                     {
-                        if (player[p].cardInHand.data[j] > 0 && biggerThan(j, minf, mainColor, mainNumber))
+                        if (p != thisplayer)
                         {
-                            return false;
+                            maxother[p].Clear();
+                            maxother[p] = findtractor(player[p].cardInHand, length, fc.thisColor, mainColor, mainNumber);
+                            if (biggerThan(maxother[p].Last(), maxtractor.Last(), mainColor, mainNumber))
+                            {
+                                return false;
+                            }
+
                         }
                     }
                 }
 
+                //没有拖拉机则结束循环
+                else
+                {
+                    break;
+
+                }
+                //合法则将比较过的拖拉机删去后继续循环
+                foreach (int j in maxtractor)
+                {
+                    firstCard.data[j] -= 2;
+                }
+                for (int p = 0; p < 4; p++)
+                {
+                    foreach (int j in maxother[p])
+                    {
+                        player[p].cardInHand.data[j] -= 2;
+                    }
+
+                }
             }
 
+            int minf = -1;//最小牌minf
+                          //四同 三同 对子 单个 找最小的牌，都要比其他玩家的所有牌大
+            for (int k = 4; k > 0; k--)
+            {
+                minf = -1;
+                for (int i = 0; i < 54; i++)
+                {
+                    if (firstCard.data[i] == k)
+                        if (minf == -1) minf = i;
+                        else
+                            minf = biggerThan(minf, i, mainColor, mainNumber) ? i : minf;
+                    //与其他玩家的牌进行比较
+                    for (int p = 0; p < 4; i++)
+                        if (p != thisplayer)
+                            for (int j = 0; j < 54; j++)
+                                if (player[p].cardInHand.data[j] == k && biggerThan(j, minf, mainColor, mainNumber))
+                                    return false;
+                }
+
+            }
             return true;
         }
 
@@ -2051,6 +1641,7 @@ namespace GameUtility
         public
           int orderCompare(CardList firstCard, CardList playCard, CardList handCard)
         {
+            Console.WriteLine("主花色" + mainColor + ' ' + "主级数" + mainNumber);
             cardComb fc = new cardComb(firstCard, mainNumber, mainColor),
                 pc = new cardComb(playCard, mainNumber, mainColor);
 
@@ -2061,8 +1652,8 @@ namespace GameUtility
             int firstSame = fc.thisSame;
             int firstType = fc.thisType;
 
-            //牌数不够（不是没有）该花色牌全部得出，且必输
-            //牌数够时，只能出该区间的牌
+            //牌数不够（不是没有）该花色牌全部得出，且必输？？？？？？？？？？
+
             int hcount = 0;
             int pcount = 0;
             if (mainColor == 4)
@@ -2123,12 +1714,6 @@ namespace GameUtility
                 else
                     return 1;
             }
-            else
-            {
-                if (pc.thisColor != fc.thisColor)
-                    return 0;
-            }
-
 
             if (fc.thrown)
             {
@@ -2149,7 +1734,6 @@ namespace GameUtility
 
                     //找出firstCard中最长拖拉机
                     maxtractor = longtractor(firstCard, fc.thisColor, mainColor, mainNumber);
-
                     int length = maxtractor.Count();
                     //若为拖拉机，则找handCard和playCard中的对应拖拉机
                     if (length > 1)
@@ -2163,7 +1747,6 @@ namespace GameUtility
                             while (true)
                             {
                                 htractor = findtractor(handCard, maxlength, pc.thisColor, mainColor, mainNumber);
-
                                 //htractor为空，继续找拖拉机
                                 if (!htractor.Any() && maxlength > 1)
                                     maxlength--;
@@ -3139,7 +2722,9 @@ namespace GameUtility
                 }
                 // 只有当跟牌长度相等 且最大牌比首家大 state维持为2 否则state为1
                 return state;
+
             }
+
         }
 
         /// <summary>
@@ -3162,10 +2747,7 @@ namespace GameUtility
                 case 1:
                     return new Judgement("notShot", true);
                 case 2:
-                    if (orderCompare(CardListToCardList(handOutCards[biggestPlayerId]), playCard, handCard) <= 1)
-                        return new Judgement("notShot", true);
-                    else
-                        return new Judgement("shot", true);
+                    return new Judgement("shot", true);
             }
             return new Judgement("placeholder", true);
         }
@@ -3173,12 +2755,12 @@ namespace GameUtility
         // 判断出牌合法性(对战阶段)
         public Judgement IsLegalDeal(PlayerInfo[] m_player, Card[] cards)
         {
+            // 规则组：出2张牌会卡住，可能是死循环
             RulePlayer[] tmp = PlayerToRulePlayer(m_player);
             CardList playCard = CardArrayToCardList(cards);
             CardList firstCard = CardListToCardList(handOutCards[firstHomePlayerId]);
             if (currentPlayerId == firstHomePlayerId)
             {
-                biggestPlayerId = firstHomePlayerId;
                 return canPlay(playCard, tmp, currentPlayerId);
             }
             else
@@ -3320,8 +2902,7 @@ namespace GameUtility
         // 更新首家
         public void UpdateFirstHome()
         {
-            //firstHomePlayerId = 0;
-            firstHomePlayerId = biggestPlayerId;
+            firstHomePlayerId = 0;
         }
         // 更新首家
         public void UpdateFirstHome(int res)
@@ -3392,4 +2973,5 @@ namespace GameUtility
         }
 
     }
+
 }

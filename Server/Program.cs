@@ -27,7 +27,7 @@ namespace server_0._0._1
     public class Program
     {
         // 房间最大可容纳人数
-        static int m_roomSize = 10;
+        static int m_roomSize = 100000000;
 
         // 开始游戏要求的玩家个数
         // 当前在线的玩家数目
@@ -211,42 +211,42 @@ namespace server_0._0._1
         // 带等候区的玩家进入房间
         static void GetReady()
         {
-            //m_players.Clear();
+            m_players.Clear();
             // 首先更新主程序掌握的玩家列表
             // 对每一个网络交流中的玩家
             for (int i = 0; i < ComServer.players.Count; i++)
             {
                 Player comPlayer = ComServer.players[i];
-                // 检查是否已经更新到主程序
-                int idx = m_players.FindIndex(player => player.id == comPlayer.id);
-                // 如果还没有更新到主程序
-                if (idx < 0)
-                {
-                    // 加入此玩家
-                    m_players.Add(new PlayerInfo(comPlayer.name, comPlayer.id));
-                    //// 加入此玩家的统计数据
-                    //m_userStats.Add(new StatObject(comPlayer.name));
-                    //// 将统计数据同步到玩家信息中
-                    //m_userStats.Last().CopyTo(m_players.Last());
-                }
+                //// 检查是否已经更新到主程序
+                //int idx = m_players.FindIndex(player => player.id == comPlayer.id);
+                //// 如果还没有更新到主程序
+                //if (idx < 0)
+                //{
+                //    // 加入此玩家
+                //    m_players.Add(new PlayerInfo(comPlayer.name, comPlayer.id));
+                //    //// 加入此玩家的统计数据
+                //    //m_userStats.Add(new StatObject(comPlayer.name));
+                //    //// 将统计数据同步到玩家信息中
+                //    //m_userStats.Last().CopyTo(m_players.Last());
+                //}
 
-                //m_players.Add(new PlayerInfo(comPlayer.name, comPlayer.id));
+                m_players.Add(new PlayerInfo(comPlayer.name, comPlayer.id));
             }
-            // 对每一个主程序中的玩家
-            for (int i = 0; i < m_players.Count; i++)
-            {
-                //PlayerInfo thisPlayer = m_players[i];
-                string name = m_players[i].name;
-                // 检查是否多余（说明该玩家已经断线）
-                int idx = ComServer.players.FindIndex(player => player.name == name);
-                // 如果该玩家不在网络交流中，说明他已经断线了
-                if (idx < 0)
-                {
-                    // 移除掉线玩家
-                    m_players.RemoveAll(player => player.name == name);
-                    //m_userStats.RemoveAll(stat => stat.username == name);
-                }
-            }
+            //// 对每一个主程序中的玩家
+            //for (int i = 0; i < m_players.Count; i++)
+            //{
+            //    //PlayerInfo thisPlayer = m_players[i];
+            //    string name = m_players[i].name;
+            //    // 检查是否多余（说明该玩家已经断线）
+            //    int idx = ComServer.players.FindIndex(player => player.name == name);
+            //    // 如果该玩家不在网络交流中，说明他已经断线了
+            //    if (idx < 0)
+            //    {
+            //        // 移除掉线玩家
+            //        m_players.RemoveAll(player => player.name == name);
+            //        //m_userStats.RemoveAll(stat => stat.username == name);
+            //    }
+            //}
 
 
             // 更新完成
@@ -1218,7 +1218,6 @@ namespace server_0._0._1
                 // 如果有出牌
                 if (m_dealCards.Length > 0)
                 {
-
                     Console.WriteLine("{0} 的出牌", m_players[m_dealer.currentPlayerId].name);
                     Card.PrintDeck(m_dealCards);
 
@@ -1227,7 +1226,7 @@ namespace server_0._0._1
                     Console.Write(judgement.isValid);
                     Console.Write(' ');
                     Console.WriteLine(judgement.message);
-                    
+
                     // 当玩家是自主行动，不是代理出牌
                     if (!isTimeOut && !isAutoPlay)
                     {
@@ -1241,10 +1240,10 @@ namespace server_0._0._1
                     if (judgement.isValid)
                     {
                         // 若压制则更新首家
-                        if (judgement.message == "shot")
-                        {
-                            m_dealer.UpdateFirstHome(m_dealer.currentPlayerId);
-                        }
+                        //if (judgement.message == "shot")
+                        //{
+                        m_dealer.UpdateFirstHome(m_dealer.currentPlayerId);
+                        //}
                         // 将选牌从手牌中扣除
                         for (int j = 0; j < m_dealCards.Length; j++)
                         {
@@ -1423,70 +1422,11 @@ namespace server_0._0._1
                 {
                     try
                     {
-                        // 如果
-
-                        //if(ComServer.doneReceptEvent.WaitOne(0))
-                        //{
-                        //ComServer.doneReceptEvent.WaitOne();
-                        // 等待前台完成接待
-                        // 等待断线经理完成断线处理工作
-                        //ComServer.doneHandleDisconnect.WaitOne();
-                        //MyConsole.Log("准备开始游戏循环"/*, Thread.CurrentThread.Name*/, MyConsole.LogType.Debug);
-
-                        // 指示游戏主循环开始工作
-                        //m_doneGameLoopEvent.Reset();
-                        //try
-                        //{
-                        // 解锁所有客户端，以同步刚刚进入房间的玩家
-                        //ComServer.UnlockAll();
-
-                        // 处理断线玩家
-                        //List<Player> disconnectPlayers = ComServer.HandleDisconnect();
-                        //m_isReady = GameIsReady();
-                        //// 如果检查发现有玩家掉线了
-                        //if (disconnectPlayers.Count > 0)
-                        //{
-                        //    // 并且掉线后游戏变成没准备好，说明掉线的是对战玩家（而不是观战的），这就很严重了
-                        //    if (!m_isReady)
-                        //    {
-                        //        // 更新游戏状态机，重新开始准备
-                        //        m_gameStateMachine.Update(GameStateMachine.Signal.NotReady);
-                        //    }
-                        //    // 如果掉线的只是观战的
-                        //    else
-                        //    {
-
-                        //    }
-                        //}
-
                         // 向所有玩家发送最新的游戏状态
                         ComServer.Broadcast(m_gameStateMachine.state);
 
-                        // 如果正在游戏中
-                        //if (m_gameStateMachine.state != GameStateMachine.State.GetReady && m_gameStateMachine.state != GameStateMachine.State.Broadcasting)
-                        //{
-                        // 向所有玩家发送所有玩家的分数
-                        //for (int j = 0; j < m_players.Count; j++)
-                        //{
-                        //    ComServer.Broadcast(m_players[j].score);
-                        //}
-
                         // 更新荷官掌握的信息
                         UpdateDealer();
-
-                        //}
-
-
-                        //for (int i = 0; i < Dealer.playerNumber; i++)
-                        //{
-                        //    // 向所有玩家发送最新的游戏状态
-                        //    ComServer.Respond(i, m_gameStateMachine.state);
-                        //    // 向所有玩家发送所有玩家的分数
-                        //    for (int j = 0; j < Dealer.playerNumber; j++)
-                        //    {
-                        //        ComServer.Respond(i, m_players[j].score);
-                        //    }
-                        //}
 
                         switch (m_gameStateMachine.state)
                         {
@@ -1498,10 +1438,6 @@ namespace server_0._0._1
                                     m_gameStateMachine.Update(GameStateMachine.Signal.Ready);
                                 }
                                 break;
-                            //case GameStateMachine.State.Broadcasting:
-                            //    Broadcast();
-                            //    m_gameStateMachine.Update(GameStateMachine.Signal.DoneBroadcasting);
-                            //    break;
                             case GameStateMachine.State.Deal:
                                 // 重新发牌
                                 Console.WriteLine("正在发牌");
@@ -1703,13 +1639,6 @@ namespace server_0._0._1
                                 m_gameStateMachine.Update(GameStateMachine.Signal.DoneScore2Deal);
                                 break;
                         }
-                        //}
-                        //// 很有可能是断线异常，向上层抛出
-                        //catch
-                        //{
-                        //    throw;
-                        //}
-
                     }
                     catch
                     {
@@ -1721,18 +1650,13 @@ namespace server_0._0._1
                     }
                     finally
                     {
-                        
+
                     }
                     // 处理断线
                     ComServer.HandleDisconnect();
-
-
                     // 指示游戏主循环已经结束
                     m_doneGameLoopEvent.Set();
-                    //Thread.Sleep(1000);
-
                 }
-                //}
             }
         }
 
@@ -1782,30 +1706,30 @@ namespace server_0._0._1
             // 死循环
             //while (true)
             //{
-                // 等待游戏预备信号
-                //ComServer.gameReadyEvent.WaitOne();
+            // 等待游戏预备信号
+            //ComServer.gameReadyEvent.WaitOne();
 
-                //try
-                //{
-                // 开始游戏主循环
-                GameLoop();
-                //}
-                //// 如果有玩家断线了
-                //catch (Exception e)
-                //{
-                //    // 调试：输出异常信息
-                //    Console.WriteLine(e.Message);
-                //    // 重新开始 GameLoop
-                //    continue;
-                //}
-                //finally
-                //{
+            //try
+            //{
+            // 开始游戏主循环
+            GameLoop();
+            //}
+            //// 如果有玩家断线了
+            //catch (Exception e)
+            //{
+            //    // 调试：输出异常信息
+            //    Console.WriteLine(e.Message);
+            //    // 重新开始 GameLoop
+            //    continue;
+            //}
+            //finally
+            //{
 
-                //}
+            //}
 
 
-                //// 开始游戏主循环
-                //GameLoop();
+            //// 开始游戏主循环
+            //GameLoop();
             //}
         }
     }
