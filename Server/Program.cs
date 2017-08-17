@@ -1297,8 +1297,7 @@ namespace server_0._0._1
                         m_dealer.handOutPlayerCount++;
                         // 必须保证首家 ID 已经确定了，才能更新下一出牌玩家 ID
                         m_dealer.UpdateNextPlayer();
-                        // 进入下一轮出牌
-                        m_dealer.circle++;
+
                         // 如果最后一个玩家出牌
                         if (m_dealer.handOutPlayerCount == 0)
                         {
@@ -1306,6 +1305,8 @@ namespace server_0._0._1
                             m_doneClearPlayCardDelay = false;
                             // 清空荷官中存储的本轮玩家出牌
                             m_dealer.ClearHandOutCards();
+                            // 进入下一轮出牌
+                            m_dealer.circle++;
                         }
                         // 标志可以开始为下一玩家出牌思考计时
                         m_isOkCountDown = true;
