@@ -306,6 +306,12 @@ namespace server_0._0._1
 
         }
 
+        static void Ready2Deal()
+        {
+            // 过渡更新
+            m_dealer.Ready2Deal();
+        }
+
         static void DealCards()
         {
             // 洗牌
@@ -329,6 +335,9 @@ namespace server_0._0._1
 
         static void Deal2Bid()
         {
+            // 过渡更新
+            m_dealer.Deal2Bid();
+
             // 开始计时
             m_touchCardStopwatch.Restart();
 
@@ -345,12 +354,6 @@ namespace server_0._0._1
 
             }
             m_handCardShowNumber = 0;
-            for (int i = 0; i < m_dealer.currentBidCards.Length; i++)
-            {
-                m_dealer.currentBidCards[i].Clear();
-            }
-            // 用负数指示没有玩家抢底
-            m_dealer.gotBottomPlayerId = -1;
 
             // 这时还不能确定主级数？因为有可能有多个台上方？
             // 姑且先这样：如果台上方只有一个，则更新主级数；否则，留到后面确定
@@ -433,7 +436,7 @@ namespace server_0._0._1
                     {
 
                     }
-                    // 更新玩家的手牌
+                    // 亮完牌之后，更新玩家的手牌
                     m_players[i].cardInHand = m_dealer.playersHandCard[i];
                     // 将该玩家的手牌发送到客户端
                     //ComServer.Respond(m_players[i].socket, Card.ToInt(m_players[i].playerInfo.cardInHand));
@@ -501,6 +504,8 @@ namespace server_0._0._1
         // 处理摸牌到最后抢底过渡阶段
         static void Touch2LastBid()
         {
+            // 过渡更新
+            m_dealer.Touch2LastBid();
             // 重新开始计时
             m_lastBidStopwatch.Restart();
         }
@@ -581,23 +586,9 @@ namespace server_0._0._1
         // 处理最后抢底到埋底的过渡阶段
         static void LastBid2BidBury()
         {
-            // 检查一下，是否有玩家抢底
-            // 如果没有玩家抢底
-            if (m_dealer.gotBottomPlayerId < 0)
-            {
-                // 从台上方玩家中随机选择一个作为庄家
-                Random rdn = new Random();
-                int idx = rdn.Next() % m_dealer.upperPlayersId.Length;
-                m_dealer.gotBottomPlayerId = m_dealer.upperPlayersId[idx];
-                // 随机确定这局的花色？gotBottomSuit
-            }
-            else
-            {
-                // 将抢底成功者的亮牌花色记录下来
-                m_dealer.gotBottomSuit = m_dealer.currentBidCards[m_dealer.gotBottomPlayerId][0].suit;
+            // 过渡更新
+            m_dealer.LastBid2BidBury();
 
-                m_dealer.gotBottomShowCards = new List<Card>(m_dealer.currentBidCards[m_dealer.gotBottomPlayerId]);
-            }
             // 在最后摸牌结束后，将玩家的亮牌重新放回到手牌当中
             for (int i = 0; i < m_players.Count; i++)
             {
@@ -628,8 +619,6 @@ namespace server_0._0._1
 
             // 启动埋底计时器
             m_bidBuryStopwatch.Restart();
-
-
         }
 
         // 抢底阶段：处理庄家埋底
@@ -710,6 +699,18 @@ namespace server_0._0._1
             return isOk;
         }
 
+        // 没人抢底，重新发牌抢底
+        static void Bid2Deal()
+        {
+            // 过渡更新
+            m_dealer.Bid2Deal();
+            // 清空玩家手牌；因为可能没人抢底，要重新发牌
+            for (int i = 0; i < m_players.Count; i++)
+            {
+                m_players[i].cardInHand.Clear();
+            }
+        }
+
         static void Bid2Fry()
         {
             // 暂停并重置计时器
@@ -718,7 +719,15 @@ namespace server_0._0._1
             // 重置计数器
             m_handCardShowNumber = 0;
 
-            m_dealer.Bid2Fry();
+            try
+            {
+                // 过渡更新
+                m_dealer.Bid2Fry();
+            }
+            catch(Exception e)
+            {
+                MyConsole.Log(e.Message);
+            }
 
             //// 重置炒底亮牌数下界
             //m_dealer.fryCardLowerBound = 0;
@@ -934,10 +943,12 @@ namespace server_0._0._1
         // 处理炒底阶段亮牌到埋底过渡阶段
         static void FryShow2Bury()
         {
+            // 过渡更新
+            m_dealer.FryShow2Bury();
+
             // 告知客户端当前炒底玩家没有跟牌
             //ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, m_isFollow);
             ComServer.Respond(m_dealer.currentFryPlayerId, m_isFollow);
-
 
             // 如果玩家有跟牌
             if (m_isFollow)
@@ -1041,17 +1052,24 @@ namespace server_0._0._1
         // 处理炒底阶段，从埋底重新回到亮牌的过渡流程
         static void FryBury2Show()
         {
-            // 设置下一玩家亮牌
-            m_dealer.currentFryPlayerId++;
+            // 过渡更新
+            m_dealer.FryBury2Show();
             // 重启亮牌计时器
             m_showCardStopwatch.Restart();
         }
 
+        /// <summary>
+        /// 炒底到找朋友过渡阶段
+        /// </summary>
         static void Fry2FindFriend()
         {
+            // 过渡更新
+            m_dealer.Fry2FindFriend();
+
             // 重启寻友计时器
             m_findFriendStopwatch.Restart();
             // TODO：炒底确定庄家
+            // DONE
 
             for (int j = 0; j < m_players.Count; j++)
             {
@@ -1071,8 +1089,18 @@ namespace server_0._0._1
             m_dealer.UpdateMainFry();
             // 更新庄家
             m_dealer.UpdateBankerFry();
+
+            // 将庄家 ID 发送到客户端
+            for (int i = 0; i < m_players.Count; i++)
+            {
+                ComServer.Respond(i, m_dealer.bankerPlayerId.ToArray());
+            }
         }
 
+        /// <summary>
+        /// 找朋友阶段
+        /// </summary>
+        /// <returns>是否完成找朋友</returns>
         static bool FindFriend()
         {
             // 是否完成寻友
@@ -1164,37 +1192,42 @@ namespace server_0._0._1
             return isOk;
         }
 
+
+        /// <summary>
+        /// 找完朋友到停留过渡阶段
+        /// </summary>
         static void FindFriend2Linger()
         {
+            // 过渡更新
+            m_dealer.FindFriend2Linger();
+
             // 重启计时器
             m_findFriendLingerStopwatch.Restart();
-            // 设置首家出牌ID
-            m_dealer.firstHomePlayerId = m_dealer.bankerPlayerId[0];
-
         }
 
+        /// <summary>
+        /// 找完朋友的停留阶段
+        /// </summary>
+        /// <returns>是否完成过渡</returns>
         static bool FindFriendLinger()
         {
             return m_findFriendLingerStopwatch.ElapsedMilliseconds > m_findFriendLingerDelay;
         }
 
+        /// <summary>
+        /// 找朋友到对战的过渡阶段
+        /// </summary>
         static void FindFriend2Fight()
         {
-            // 首次出牌对牌数没有限制
-            m_dealer.dealRequiredLength = -1;
-            // 重置轮数为 1 
-            m_dealer.circle = 1;
+            // 过渡更新
+            m_dealer.FindFriend2Fight();
             // 标志可以开始计时
             m_isOkCountDown = true;
-
-
-
-            // 设置首家亮牌为庄家
-            m_dealer.firstHomePlayerId = m_dealer.bankerPlayerId[0];
-            // 设置当前出牌玩家为首家
-            m_dealer.currentPlayerId = m_dealer.firstHomePlayerId;
         }
 
+        /// <summary>
+        /// 对战阶段
+        /// </summary>
         static void Fight()
         {
             // 如果不是第 1 轮出牌，而且所有玩家都出过 1 次牌，而且还没完成 1 次延时
@@ -1444,9 +1477,13 @@ namespace server_0._0._1
 
         }
 
+        /// <summary>
+        /// 对战到积分阶段
+        /// </summary>
         static void Fight2Score()
         {
-
+            // 过渡更新
+            m_dealer.Fight2Score();
         }
 
         // 处理计分流程
@@ -1468,18 +1505,18 @@ namespace server_0._0._1
             }
         }
 
+        /// <summary>
+        /// 积分到重新发牌的过渡阶段
+        /// </summary>
         static void Score2Deal()
         {
-            // 计分结束，盘数增加
-            m_dealer.round++;
-            //// 清空玩家手牌
-            //for(int i = 0; i < m_players.Length; i++)
-            //{
-            //    m_players[i].playerInfo.cardInHand.Clear();
-            //}
-
-            // 清空庄家 ID
-            m_dealer.bankerPlayerId.Clear();
+            // 过渡更新
+            m_dealer.Score2Deal();
+            // 清空玩家手牌
+            for (int i = 0; i < m_players.Count; i++)
+            {
+                m_players[i].cardInHand.Clear();
+            }
 #if (DATABASE)
             // 将玩家信息统计之后更新到数据库服务器
             UpdatePlayerStats();
@@ -1547,6 +1584,10 @@ namespace server_0._0._1
                                     m_gameStateMachine.Update(GameStateMachine.Signal.Ready);
                                 }
                                 break;
+                            case GameStateMachine.State.Ready2Deal:
+                                Ready2Deal();
+                                m_gameStateMachine.Update(GameStateMachine.Signal.DoneReady2Deal);
+                                break;
                             case GameStateMachine.State.Deal:
                                 // 重新发牌
                                 Console.WriteLine("正在发牌");
@@ -1602,9 +1643,19 @@ namespace server_0._0._1
                                 // 如果已经没有更高的出价，或者已经超时了
                                 if (m_dealer.NoHigherBid() || isOverTime)
                                 {
-                                    // 直接让庄家埋底
-                                    m_gameStateMachine.Update(GameStateMachine.Signal.EndLastBid);
+                                    // 如果有抢底的人
+                                    if (m_dealer.hasBidder)
+                                    {
+                                        // 让庄家埋底
+                                        m_gameStateMachine.Update(GameStateMachine.Signal.EndLastBid);
+                                    }
+                                    // 否则，重新发牌
+                                    else
+                                    {
+                                        m_gameStateMachine.Update(GameStateMachine.Signal.NoBidder);
+                                    }
                                 }
+
                                 break;
                             case GameStateMachine.State.LastBid2BidBury:
                                 LastBid2BidBury();
@@ -1616,6 +1667,10 @@ namespace server_0._0._1
                                 {
                                     m_gameStateMachine.Update(GameStateMachine.Signal.DoneBidBury);
                                 }
+                                break;
+                            case GameStateMachine.State.Bid2Deal:
+                                Bid2Deal();
+                                m_gameStateMachine.Update(GameStateMachine.Signal.DoneBid2Deal);
                                 break;
                             case GameStateMachine.State.Bid2Fry:
                                 Bid2Fry();
@@ -1749,13 +1804,15 @@ namespace server_0._0._1
                                 break;
                         }
                     }
-                    catch
+                    catch(Exception e)
                     {
                         // 可能是断线了
                         // 向所有玩家发送紧急通告
                         ComServer.EmergencyBroadcast("有玩家断线");
                         // 重新设置游戏为准备中状态
                         m_gameStateMachine.Update(GameStateMachine.State.GetReady);
+
+                        MyConsole.Log(e.Message);
                     }
                     finally
                     {

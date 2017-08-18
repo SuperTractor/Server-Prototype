@@ -12,6 +12,7 @@ namespace GameUtility
         {
             //Broadcasting,   // 广播详细阶段，用于通知在线客户端一些须知信息
             GetReady,   // 等待其他玩家（此时房间内人数小于 4）
+            Ready2Deal, // 准备开始到发牌的过渡
             Deal,   // 发牌阶段
             Deal2Bid,   // 发牌到抢底的缓冲阶段
             //Bid,    // 抢底阶段
@@ -20,6 +21,7 @@ namespace GameUtility
             LastBid,    // 最后抢底，为摸牌结束后，再给玩家几秒钟的思考时间，看看还需不需要抢底
             LastBid2BidBury,    // 最后抢底到埋底的过渡阶段
             BidBury,    // 抢底阶段结束后，庄家埋底
+            Bid2Deal,   // 没人抢底，重新发牌，过渡阶段
             Bid2Fry,    // 抢底到炒底的缓冲阶段
             //Fry,    // 炒底阶段
             FryShow,    // 炒底阶段的亮牌
@@ -48,14 +50,17 @@ namespace GameUtility
             //DoneBroadcasting,   // 完成广播操作
             //NotReady,   // 游戏还没有准备好开始
             Ready,      // 有 4 个玩家进入房间，可以开始游戏
+            DoneReady2Deal, // 完成准备到发牌过渡
             DoneDeal,   // 完成发牌
             DoneDeal2Bid,   // 完成发牌-抢底缓冲阶段的清理, 初始化
             DoneTouch,      // 完成摸牌
             DoneTouch2LastBid,  // 完成摸牌到最后抢底的过渡
             NoHigherBid,     // 不可能有更高出价者, 抢底结束
             EndLastBid,     // 最后抢底阶段也已经结束
+            NoBidder,   // 没有抢底的人
             DoneLastBid2BidBury,    // 完成最后抢底到埋底的过渡
             DoneBidBury,        // 庄家完成埋底
+            DoneBid2Deal,       // 完成抢底到重新发牌的过渡阶段
             DoneBid2Fry,    // 完成抢底-炒底缓冲阶段的清理, 初始化
             //NoHigherFry,     // 不可能有更高出价者, 炒底结束
             //AllSkipFry,     // 所有玩家跳过炒牌，炒底结束
@@ -91,9 +96,11 @@ namespace GameUtility
                 //    break;
 
                 case Signal.Ready:
+                    m_state = State.Ready2Deal;
+                    break;
+                case Signal.DoneReady2Deal:
                     m_state = State.Deal;
                     break;
-
                 // 如果已经完成发牌
                 case Signal.DoneDeal:
                     // 将游戏状态设置为抢底
@@ -118,8 +125,14 @@ namespace GameUtility
                 case Signal.DoneLastBid2BidBury:
                     m_state = State.BidBury;
                     break;
+                case Signal.NoBidder:
+                    m_state = State.Bid2Deal;
+                    break;
                 case Signal.DoneBidBury:
                     m_state = State.Bid2Fry;
+                    break;
+                case Signal.DoneBid2Deal:
+                    m_state = State.Deal;
                     break;
                 case Signal.DoneBid2Fry:
                     //m_state = State.Fry;
