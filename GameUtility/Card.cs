@@ -12,7 +12,7 @@ namespace GameUtility
         public enum Suit { Diamond, Spade, Club, Heart, Joker0, Joker1 };
         // 花色
         public Suit suit { get; set; }
-        // 点数
+        // 点数：0~12 表示 A,2到10,J,Q,K；13表示大小鬼
         public int points { get; set; }
         // 一副牌的牌数
         public const int cardNumberOfOnePack = 54;
