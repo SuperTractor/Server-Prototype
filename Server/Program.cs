@@ -1,4 +1,7 @@
-﻿using System;
+﻿//#define DATABASE
+#undef DATABASE
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -149,11 +152,12 @@ namespace server_0._0._1
             Console.OutputEncoding = Encoding.Unicode;
             playersIsConnected = new bool[Dealer.playerNumber];
 
+#if (DATABASE)
             // 初始化数据库客户端
             DBClient.RegisterLogger(MyConsole.Log);
             DBClient.Initialize();
             DBClient.Connect();
-
+#endif
 
             // 初始化 ComServer
             ComServer.Initialize(Dealer.playerNumber, m_roomSize, m_doneGameLoopEvent);
@@ -245,6 +249,7 @@ namespace server_0._0._1
 
                 m_players.Add(new PlayerInfo(comPlayer.name, comPlayer.id));
 
+#if (DATABASE)
                 // 从数据库中获取该用户的信息
                 DataObject dataObj = DBClient.Find(statTableName, comPlayer.name);
                 StatObject statObj;
@@ -263,6 +268,7 @@ namespace server_0._0._1
                 }
                 // 更新到玩家信息当中
                 statObj.CopyTo(m_players.Last());
+#endif
             }
             //// 对每一个主程序中的玩家
             //for (int i = 0; i < m_players.Count; i++)
@@ -353,6 +359,14 @@ namespace server_0._0._1
             }
             // 用负数指示没有玩家抢底
             m_dealer.gotBottomPlayerId = -1;
+
+            // 这时还不能确定主级数？因为有可能有多个台上方？
+            // 姑且先这样：如果台上方只有一个，则更新主级数；否则，留到后面确定
+            if (m_dealer.upperPlayersId.Length == 1)
+            {
+
+            }
+
         }
 
         // 处理抢底流程
@@ -714,6 +728,8 @@ namespace server_0._0._1
                 //ComServer.Respond(m_players[i].socket, m_dealer.bankerPlayerId.ToArray());
                 ComServer.Respond(i, m_dealer.bankerPlayerId.ToArray());
             }
+
+
         }
 
         // 处理炒底流程
@@ -1438,9 +1454,10 @@ namespace server_0._0._1
 
             // 清空庄家 ID
             m_dealer.bankerPlayerId.Clear();
-
+#if (DATABASE)
             // 将玩家信息统计之后更新到数据库服务器
             UpdatePlayerStats();
+#endif
         }
 
         // 更新荷官需要掌握的信息
