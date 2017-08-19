@@ -271,7 +271,7 @@ namespace GameUtility
                     {
                         // 先拿出来所有的 A
                         List<Card> levelCards = cards.FindAll(card => card.points == 0);
-                        cards.RemoveAll(card => card.points + 1 == 0);
+                        cards.RemoveAll(card => card.points== 0);
                         Sort(ref levelCards, 1);
                         temp.AddRange(levelCards);
                         // 然后再排剩下的牌

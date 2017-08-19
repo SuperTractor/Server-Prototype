@@ -1297,7 +1297,8 @@ namespace GameUtility
         {
             // 测试：总亮牌数比前一个炒底玩家的多就行
             bool isValid;
-            isValid = addFryCards.Length + showCards[playerId].Count > fryCardLowerBound;
+            int total = addFryCards.Length + showCards[playerId].Count;
+            isValid = total > fryCardLowerBound&&total<=m_fryCardLimit;
             string message;
             if (isValid)
             {

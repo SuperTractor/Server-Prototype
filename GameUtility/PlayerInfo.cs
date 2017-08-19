@@ -17,7 +17,7 @@ namespace GameUtility
         public int score { get; set; }
         // 手牌
         // 手牌空的位置用 null 表示
-        public List<Card> cardInHand { get; set; }
+        public List<Card> cardInHand /*{ get; set; }*/;
         //public Card[] cardInHand { get; set; }
 
         // 统计数据部分
