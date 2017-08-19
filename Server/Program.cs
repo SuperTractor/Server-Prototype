@@ -57,6 +57,8 @@ namespace server_0._0._1
 
         // 荷官
         static Dealer m_dealer;
+        // 牌的排序家
+        static CardSorter m_cardSorter;
         // 出牌要求的牌数
         // 游戏状态机
         static GameStateMachine m_gameStateMachine;
@@ -310,6 +312,11 @@ namespace server_0._0._1
         {
             // 过渡更新
             m_dealer.Ready2Deal();
+            // 更新玩家的级数
+            for (int i = 0; i < m_dealer.playerLevels.Length; i++)
+            {
+                m_dealer.playerLevels[i] = m_players[i].level;
+            }
         }
 
         static void DealCards()
@@ -330,7 +337,10 @@ namespace server_0._0._1
                 //Console.WriteLine("向 " + m_players[i].playerInfo.name + " 发送手牌");
                 //ComServer.Respond(m_players[i].socket, Card.ToInt(m_players[i].playerInfo.cardInHand));
             }
-
+            // 初始化排序家
+            m_cardSorter = new CardSorter(m_dealer);
+            // 向客户端发送一次排序家
+            ComServer.Broadcast(m_cardSorter);
         }
 
         static void Deal2Bid()
@@ -719,15 +729,15 @@ namespace server_0._0._1
             // 重置计数器
             m_handCardShowNumber = 0;
 
-            try
-            {
-                // 过渡更新
-                m_dealer.Bid2Fry();
-            }
-            catch(Exception e)
-            {
-                MyConsole.Log(e.Message);
-            }
+            //try
+            //{
+            // 过渡更新
+            m_dealer.Bid2Fry();
+            //}
+            //catch(Exception e)
+            //{
+            //MyConsole.Log(e.Message);
+            //}
 
             //// 重置炒底亮牌数下界
             //m_dealer.fryCardLowerBound = 0;
@@ -742,7 +752,7 @@ namespace server_0._0._1
             // 设置庄家
             // 首盘牌抢到底牌方即为做庄；这个可能要炒底来handle一下
             m_dealer.UpdateBankerBid();
-            
+
             // 将庄家 ID 发送到客户端
             for (int i = 0; i < m_players.Count; i++)
             {
@@ -1530,18 +1540,25 @@ namespace server_0._0._1
             {
                 // 更新荷官掌握的玩家手牌
                 m_dealer.playersHandCard[i] = m_players[i].cardInHand;
-                // 更新玩家的级数
-                m_dealer.playerLevels[i] = m_players[i].level;
+                //// 更新玩家的级数
+                //m_dealer.playerLevels[i] = m_players[i].level;
             }
             // 更新台上方玩家
-            m_dealer.UpdateUpperPlayers();
+            //m_dealer.UpdateUpperPlayers();
 
-            // 如果轮到首家出牌
-            if (m_dealer.currentPlayerId == m_dealer.firstHomePlayerId)
-            {
-                // 重新设置出牌要求长度, 即没有要求
-                m_dealer.dealRequiredLength = -1;
-            }
+            m_dealer.Update();
+
+            // 用荷官来构造排序家
+            m_cardSorter = new CardSorter(m_dealer);
+
+            // 将排序家一股脑的同步到客户端去
+            ComServer.Broadcast(m_cardSorter);
+
+            //// 将荷官要用来排序的必要信息同步到客户端
+            //ComServer.Broadcast(m_dealer.upperPlayersId);
+            //ComServer.Broadcast(m_dealer.playerLevels);
+            //ComServer.Broadcast(m_dealer.mainNumber);
+            //ComServer.Broadcast(m_dealer.mainColor);
         }
 
         // 检查游戏是否准备好，即是否 4 个对战玩家都在线
@@ -1804,7 +1821,7 @@ namespace server_0._0._1
                                 break;
                         }
                     }
-                    catch(Exception e)
+                    catch (Exception e)
                     {
                         // 可能是断线了
                         // 向所有玩家发送紧急通告

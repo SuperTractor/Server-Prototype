@@ -289,9 +289,9 @@ namespace Networking
                 Respond(new Message(0, 1));
                 //code = (int)message.data;
             }
-            catch (Exception e)
+            catch/* (Exception e)*/
             {
-                MyConsole.Log(e.Message, MyConsole.LogType.Error);
+                //MyConsole.Log(e.Message, MyConsole.LogType.Error);
 
                 // 有异常，很可能断线了
                 return true;
