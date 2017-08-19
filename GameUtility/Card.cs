@@ -253,7 +253,19 @@ namespace GameUtility
 
         }
 
-
+        public static void Shuffle(Card[] cards)
+        {
+            Random rnd = new Random();
+            int rand_idx;
+            Card temp;
+            for (int i = 0; i < cards.Length; i++)
+            {
+                rand_idx = rnd.Next(cards.Length);
+                temp = cards[i];
+                cards[i] = cards[rand_idx];
+                cards[rand_idx] = temp;
+            }
+        }
 
 
     }

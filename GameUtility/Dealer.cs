@@ -1172,16 +1172,7 @@ namespace GameUtility
         // 洗牌
         public void Shuffle()
         {
-            Random rnd = new Random();
-            int rand_idx;
-            Card temp;
-            for (int i = 0; i < m_totalCard.Length; i++)
-            {
-                rand_idx = rnd.Next(m_totalCard.Length);
-                temp = m_totalCard[i];
-                m_totalCard[i] = m_totalCard[rand_idx];
-                m_totalCard[rand_idx] = temp;
-            }
+            Card.Shuffle(m_totalCard);
         }
         // 多次洗牌
         public void Shuffle(int times)
@@ -3277,6 +3268,7 @@ namespace GameUtility
             }
 
             cardComb maxcomb = new cardComb(maxCard, mainNumber, mainColor);
+            List<int> tempupper = new List<int>();//暂时存储新台上方
 
             //判断是否为主牌,是主牌则有底牌分
             if (maxcomb.thisColor == mainColor)
@@ -3290,15 +3282,13 @@ namespace GameUtility
                 int rank = 0;
                 totalscore -= 160;
                 rank = System.Math.Abs(totalscore) / 80;
-                m_upperPlayersId = null;
-                m_upperPlayersId = new int[4];
                 if (totalscore > 0)
                 {
                     for (int i = 0; i < 4; i++)
                         if (bankerPlayerId.Exists((int x) => x == i ? true : false) == false)
                         {
                             playerLevels[i] += rank;
-                            m_upperPlayersId[m_upperPlayersId.Length] = i;
+                            tempupper.Add(i);
                         }
 
                 }
@@ -3308,7 +3298,7 @@ namespace GameUtility
                         if (bankerPlayerId.Exists((int x) => x == i ? true : false) == true)
                         {
                             playerLevels[i] += rank;
-                            m_upperPlayersId[m_upperPlayersId.Length] = i;
+                            tempupper.Add(i);
                         }
                 }
 
@@ -3318,15 +3308,13 @@ namespace GameUtility
             {
                 totalscore -= 160;
                 int rank = System.Math.Abs(totalscore) / 80 + 1;
-                m_upperPlayersId = null;
-                m_upperPlayersId = new int[4];
                 if (totalscore == 0)
                 {
                     for (int i = 0; i < 4; i++)
                         if (bankerPlayerId.Exists((int x) => x == i ? true : false) == true)
                         {
                             playerLevels[i] += 4;
-                            m_upperPlayersId[m_upperPlayersId.Length] = i;
+                            tempupper.Add(i);
                         }
                 }
                 else if (totalscore < 80)
@@ -3335,7 +3323,7 @@ namespace GameUtility
                         if (bankerPlayerId.Exists((int x) => x == i ? true : false) == true)
                         {
                             playerLevels[i] += 2;
-                            m_upperPlayersId[m_upperPlayersId.Length] = i;
+                            tempupper.Add(i);
                         }
                 }
                 else if (totalscore < 160)
@@ -3344,7 +3332,7 @@ namespace GameUtility
                         if (bankerPlayerId.Exists((int x) => x == i ? true : false) == true)
                         {
                             playerLevels[i] += 1;
-                            m_upperPlayersId[m_upperPlayersId.Length] = i;
+                            tempupper.Add(i);
                         }
                 }
                 else if (totalscore < 240)
@@ -3352,7 +3340,7 @@ namespace GameUtility
                     for (int i = 0; i < 4; i++)
                         if (bankerPlayerId.Exists((int x) => x == i ? true : false) == false)
                         {
-                            m_upperPlayersId[m_upperPlayersId.Length] = i;
+                            tempupper.Add(i);
                         }
                 }
                 else if (totalscore < 320)
@@ -3361,7 +3349,7 @@ namespace GameUtility
                         if (bankerPlayerId.Exists((int x) => x == i ? true : false) == false)
                         {
                             playerLevels[i] += 1;
-                            m_upperPlayersId[m_upperPlayersId.Length] = i;
+                            tempupper.Add(i);
                         }
                 }
                 else if (totalscore < 400)
@@ -3370,7 +3358,7 @@ namespace GameUtility
                         if (bankerPlayerId.Exists((int x) => x == i ? true : false) == false)
                         {
                             playerLevels[i] += 2;
-                            m_upperPlayersId[m_upperPlayersId.Length] = i;
+                            tempupper.Add(i);
                         }
                 }
                 else if (totalscore == 400)
@@ -3379,14 +3367,17 @@ namespace GameUtility
                         if (bankerPlayerId.Exists((int x) => x == i ? true : false) == false)
                         {
                             playerLevels[i] += 4;
-                            m_upperPlayersId[m_upperPlayersId.Length] = i;
+                            tempupper.Add(i);
                         }
                 }
 
             }
 
-
+            //更新台上方
+            m_upperPlayersId = new int[tempupper.Count()];
+            m_upperPlayersId = tempupper.ToArray();
         }
+
 
         public void SetCurrentPlayerId(int id)
         {
@@ -3473,17 +3464,17 @@ namespace GameUtility
         public bool FryEnd()
         {
             // 测试：当要求亮牌不比最大亮牌数小时，判定已经没有更高筹码了
-            bool noHigherFry = fryCardLowerBound >= m_fryCardLimit;
-            bool allSkipFry = skipFryCount >= playerNumber;
-            if (noHigherFry)
-            {
-                Console.WriteLine("不可能有更高出价者, 炒底结束");
-            }
+            //bool noHigherFry = fryCardLowerBound >= m_fryCardLimit;
+            bool allSkipFry = skipFryCount >= playerNumber - 1;
+            //if (noHigherFry)
+            //{
+            //    Console.WriteLine("不可能有更高出价者, 炒底结束");
+            //}
             if (allSkipFry)
             {
                 Console.WriteLine("所有玩家跳过炒牌, 炒底结束");
             }
-            return noHigherFry || allSkipFry;
+            return /*noHigherFry || */allSkipFry;
         }
 
         /// <summary>
@@ -3853,7 +3844,6 @@ namespace GameUtility
             }
         }
 
-
         // 炒底阶段结束，更新主牌信息
         public void UpdateMainFry()
         {
@@ -3990,26 +3980,152 @@ namespace GameUtility
             signCard = cardSet[idx];
         }
 
-        // 炒底阶段，帮指定玩家代理亮牌
+        //// 炒底阶段，帮指定玩家代理亮牌
+        //public Card[] AutoAddShowCard(int playerId)
+        //{
+        //    // 随意选择合法的亮牌
+        //    // 测试：牌数比最低筹码大即为合法亮牌
+        //    int n = fryCardLowerBound + 1 - showCards[playerId].Count;
+        //    Card[] addShowCards = new Card[n];
+        //    // 从手牌中选取
+        //    Array.Copy(playersHandCard[playerId].ToArray(), addShowCards, n);
+        //    return addShowCards;
+        //}
+
+
+        /// <summary>
+        /// 判断是否为台上方的级数牌
+        /// </summary>
+        /// <param name="level">某数字</param>
+        /// <returns></returns>
+        public bool isUpperNumber(int level)
+        {
+            bool flag = false;
+            for (int i = 0; i < m_upperPlayersId.Length; i++)
+            {
+                if (level == playerLevels[m_upperPlayersId[i]])
+                {
+                    flag = true;
+                    break;
+                }
+            }
+            return flag;
+
+        }
+
+        /// <summary>
+        /// 炒底阶段，帮指定玩家代理亮牌
+        /// </summary>
+        /// <param name="playerId">当前玩家</param>
+        /// <returns>有得炒则返回Card[],否则返回空的Card[]！！！！！</returns>
         public Card[] AutoAddShowCard(int playerId)
         {
-            // 随意选择合法的亮牌
-            // 测试：牌数比最低筹码大即为合法亮牌
-            int n = fryCardLowerBound + 1 - showCards[playerId].Count;
-            Card[] addShowCards = new Card[n];
-            // 从手牌中选取
-            Array.Copy(playersHandCard[playerId].ToArray(), addShowCards, n);
+            //找所有台上方级数牌和大小王，判断是否合法，合法则返回
+            CardList playershandcard = new CardList();
+            playershandcard = ListCardToCardList(playersHandCard[playerId]);
+            Card[] addShowCards = new Card[2];
+
+            List<Card> formerCard = new List<Card>();
+            if (lastFryShowPlayerId == -1)
+            {
+                gotBottomShowCards.ForEach(a => formerCard.Add(a));
+            }
+            else
+            {
+                showCards[lastFryShowPlayerId].ForEach(a => formerCard.Add(a));
+            }
+
+
+            for (int i = 0; i < m_upperPlayersId.Count(); i++)
+            {
+                //台上方级数牌
+                int temp = playerLevels[m_upperPlayersId[i]] - 1;
+                int[] tempcard = { temp, temp + 13, temp + 26, temp + 39 };
+                for (int j = 0; j < 4; j++)
+                    if (playershandcard.data[tempcard[j]] > formerCard.Count())
+                    {
+                        int n = playershandcard.data[tempcard[j]];
+                        addShowCards = new Card[n];
+                        for (int k = 0; k < n; k++)
+                        {
+                            addShowCards[k] = new Card((Card.Suit)j, temp);
+                        }
+                        return addShowCards;
+                    }
+                //小王
+                if (playershandcard.data[52] >= formerCard.Count() && formerCard.Last().points != 13)
+                {
+                    int n = playershandcard.data[52];
+                    addShowCards = new Card[n];
+                    for (int k = 0; k < n; k++)
+                    {
+                        addShowCards[k] = new Card((Card.Suit)4, temp);
+                    }
+                    return addShowCards;
+
+                }
+                if (playershandcard.data[53] >= formerCard.Count() && formerCard.Last().suit != Card.Suit.Joker1)
+                {
+                    int n = playershandcard.data[53];
+                    addShowCards = new Card[n];
+                    for (int k = 0; k < n; k++)
+                    {
+                        addShowCards[k] = new Card((Card.Suit)5, temp);
+                    }
+                    return addShowCards;
+                }
+            }
+            Console.WriteLine("没有合适的牌可以炒");
+            addShowCards = new Card[0];
             return addShowCards;
+
         }
+
         // 炒底阶段，帮指定玩家代理埋底
-        // 测试：埋 8 张牌就是合法的
         public Card[] AutoBuryCard(int playerId)
         {
-            // 随意选择合法的埋牌
             Card[] buryCards = new Card[bottomCardNumber];
             // 从手牌中选取
-            Array.Copy(playersHandCard[playerId].ToArray(), buryCards, bottomCardNumber);
-            return buryCards;
+
+            List<Card> temp = new List<Card>();
+            foreach (Card a in playersHandCard[playerId])
+            {
+                //去掉手牌中的大小王，台上且非分牌
+                if (a.suit != Card.Suit.Joker0 && a.suit != Card.Suit.Joker1 &&
+                    (!isUpperNumber(a.points + 1) || a.points == 4 || a.points == 9 || a.points == 12))
+                    temp.Add(a);
+            }
+
+            //若剩下的牌中非台上分牌足够8张，去掉剩下的台上分牌
+            int count = 0;
+            foreach (Card a in temp)
+            {
+                //计算非台上分牌数目
+                if (!isUpperNumber(a.points + 1) && (a.points == 4 || a.points == 9 || a.points == 12))
+                    count++;
+            }
+            if (count >= bottomCardNumber)
+            {
+                foreach (Card a in temp)
+                {
+                    if (isUpperNumber(a.points + 1) && (a.points == 4 || a.points == 9 || a.points == 12))
+                        temp.Remove(a);
+                }
+            }
+
+            //则只有台下分牌不够8张（本身概率很小），且抽到台上非分牌（概率比原先小很多）而分牌没有全出时才会 !islegalbury 
+            Card[] tempCards = temp.ToArray();
+            while (true)
+            {
+                //Random rnd = new Random();
+                //buryCards = temp.OrderBy(x => rnd.Next()).Take(bottomCardNumber).ToArray();
+
+                Card.Shuffle(tempCards);
+                buryCards = tempCards.Take(bottomCardNumber).ToArray();
+
+                if (IsLegalBury(buryCards).isValid)
+                    return buryCards;
+            }
         }
 
         // 对战阶段，帮指定玩家代理出牌

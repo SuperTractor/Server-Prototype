@@ -69,7 +69,7 @@ namespace Networking
         //    }
         //}
 
-        public static int BufferSize = 2048;
+        public static int BufferSize = 4096;
         public static object Receive(Socket mySocket)
         {
             byte[] temp = new byte[BufferSize];

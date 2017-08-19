@@ -101,7 +101,7 @@ namespace Networking
         /// </summary>
         /// <param name="channel">网络通信频道</param>
         /// <returns>最早消息</returns>
-        Message Receive(int channel=0)
+        Message Receive(int channel = 0)
         {
             Message thisMessage;
             //MyConsole.Log("准备从收件箱中获取频道" + channel.ToString() + "上来自客户端" + m_name + "的消息", "Player-Receive", MyConsole.LogType.Debug);
@@ -285,13 +285,12 @@ namespace Networking
             Message message;
             try
             {
-                /*message = */
-                Respond(new Message(0, 1));
-                //code = (int)message.data;
+                message = Respond(new Message(0, 1));
+                code = (int)message.data;
             }
-            catch/* (Exception e)*/
+            catch (Exception e)
             {
-                //MyConsole.Log(e.Message, MyConsole.LogType.Error);
+                MyConsole.Log(e.Message, MyConsole.LogType.Error);
 
                 // 有异常，很可能断线了
                 return true;

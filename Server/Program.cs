@@ -31,6 +31,8 @@ namespace server_0._0._1
 {
     public class Program
     {
+        static object obj;
+
         // 房间最大可容纳人数
         static int m_roomSize = 100000000;
 
@@ -315,7 +317,11 @@ namespace server_0._0._1
             // 更新玩家的级数
             for (int i = 0; i < m_dealer.playerLevels.Length; i++)
             {
-                m_dealer.playerLevels[i] = m_players[i].level;
+                m_dealer.playerLevels[i] = m_players[i].level = 1;
+            }
+            for (int i = 0; i < m_players.Count; i++)
+            {
+                obj = ComServer.Respond(i,true);
             }
         }
 
@@ -356,11 +362,11 @@ namespace server_0._0._1
                 // 向客户端发送当前台上方的 ID
                 // 如果只有 1 个台上方, 则跳过摸牌效果; 否则, 才需要模拟摸牌
                 //ComServer.Respond(m_players[i].socket, m_dealer.upperPlayersId);
-                ComServer.Respond(i, m_dealer.upperPlayersId);
+                obj = ComServer.Respond(i, m_dealer.upperPlayersId);
 
                 // 发送玩家当前的等级
                 //ComServer.Respond(m_players[i].socket, m_players[i].playerInfo.level);
-                ComServer.Respond(i, m_players[i].level);
+                obj = ComServer.Respond(i, m_players[i].level);
 
             }
             m_handCardShowNumber = 0;
@@ -401,12 +407,22 @@ namespace server_0._0._1
                     //ComServer.Respond(m_players[i].socket, m_handCardShowNumber);
                     // 向 4 个客户端发送当前玩家的手牌
                     //ComServer.Respond(m_players[i].socket, Card.ToInt(m_players[i].playerInfo.cardInHand));
-                    ComServer.Respond(i, Card.ToInt(m_players[i].cardInHand));
+                    obj = ComServer.Respond(i, Card.ToInt(m_players[i].cardInHand));
 
+                    try
+                    {
+                        // 检查客户端是否跟上步伐
+                        //isFollowed &= (bool)ComServer.Respond(m_players[i].socket, "收到");
+                         obj= ComServer.Respond(i, "收到");
 
-                    // 检查客户端是否跟上步伐
-                    //isFollowed &= (bool)ComServer.Respond(m_players[i].socket, "收到");
-                    isFollowed &= (bool)ComServer.Respond(i, "收到");
+                        //isFollowed &= (bool)ComServer.Respond(i, "收到");
+                        isFollowed &= (bool)obj;
+                    }
+                    catch
+                    {
+                        throw;
+                    }
+                   
 
                     // 向该玩家发送当前可以亮牌的花色
                     //ComServer.Respond(m_players[i].socket, m_dealer.GetLegalBidColors(i/*,m_handCardShowNumber*/));
@@ -629,6 +645,20 @@ namespace server_0._0._1
 
             // 启动埋底计时器
             m_bidBuryStopwatch.Restart();
+
+
+            // 设置庄家
+            // 首盘牌抢到底牌方即为做庄；这个可能要炒底来handle一下
+            m_dealer.UpdateBankerBid();
+
+            // 将庄家 ID 发送到客户端
+            for (int i = 0; i < m_players.Count; i++)
+            {
+                ComServer.Respond(i, m_dealer.bankerPlayerId.ToArray());
+            }
+
+            // 抢底阶段结束，更新主牌信息
+            m_dealer.UpdateMainBid();
         }
 
         // 抢底阶段：处理庄家埋底
@@ -749,20 +779,6 @@ namespace server_0._0._1
             // 重启炒底阶段亮牌计时器
             m_showCardStopwatch.Restart();
 
-            // 设置庄家
-            // 首盘牌抢到底牌方即为做庄；这个可能要炒底来handle一下
-            m_dealer.UpdateBankerBid();
-
-            // 将庄家 ID 发送到客户端
-            for (int i = 0; i < m_players.Count; i++)
-            {
-                // 发送庄家剩余时间
-                //ComServer.Respond(m_players[i].socket, m_dealer.bankerPlayerId.ToArray());
-                ComServer.Respond(i, m_dealer.bankerPlayerId.ToArray());
-            }
-
-            // 抢底阶段结束，更新主牌信息
-            m_dealer.UpdateMainBid();
         }
 
         // 处理炒底流程
