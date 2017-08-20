@@ -96,6 +96,10 @@ namespace Networking
         // 二进制写入流，用于发送数据
         BinaryWriter m_binaryWriter;
 
+        // socket 接收的超时长度；如果超过这个时长还收不到来自客户端的消息，则认为他断线了，抛出异常
+        int m_receiveTimeOut = 10000;
+
+
         /// <summary>
         /// 获取特定频道的最早消息
         /// </summary>
@@ -408,6 +412,9 @@ namespace Networking
             m_name = name;
             m_id = id;
             m_socket = socket;
+
+            m_socket.ReceiveTimeout =m_receiveTimeOut;
+
             //cardInHand = new List<Card>();
             // 新建消息池
             m_inMessagePool = new List<Message>();

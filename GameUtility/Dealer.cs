@@ -1,19 +1,48 @@
 ﻿// 各阶段规则的开关
+#define RULE
+//#undef RULE
+
+
+#if (RULE)
 // 发牌
 //#define DEAL
 #undef DEAL
 // 抢底
 //#define BID
 #undef BID
+
+// 调试抢底
+//#define DEBUG_BID_1
+#undef DEBUG_BID_1
+
+
 // 炒底
 //#define FRY
 #undef FRY
+// 找朋友
+//#define FINDFRIEND
+#undef FINDFRIEND
 // 对战
 //#define FIGHT
 #undef FIGHT
 // 升级
 //#define LEVEL
 #undef LEVEL
+#else
+// 发牌
+#undef DEAL
+// 抢底
+#undef BID
+// 炒底
+#undef FRY
+// 找朋友
+#undef FINDFRIEND
+// 对战
+#undef FIGHT
+// 升级
+#undef LEVEL
+#endif
+
 
 using System;
 using System.Collections.Generic;
@@ -893,7 +922,6 @@ namespace GameUtility
             }
             return maxtractor;
         }
-
         /// <summary>
         /// 判断两张牌的大小
         /// </summary>
@@ -971,6 +999,7 @@ namespace GameUtility
             }
         }
 
+
     }
 
     public class RulePlayer
@@ -1006,6 +1035,7 @@ namespace GameUtility
 
     public class Dealer
     {
+        #region BASICS
         public int mainNumber, mainColor;
 
         // 全牌: 全部 4 副牌
@@ -1060,96 +1090,12 @@ namespace GameUtility
         // 每个玩家手牌的最大数目
         public const int cardInHandMaxNumber = cardInHandInitialNumber + bottomCardNumber;
 
-        // 抢底阶段，当前所有玩家的亮牌
-        public List<Card>[] currentBidCards;
-        // 每个玩家当前的合法亮牌花色
-        //public List<Card.Suit>[] currentLegalBidColors;
-
-        // 抢到底牌的玩家 ID
-        public int gotBottomPlayerId { get; set; }
-        // 抢到底牌的玩家的亮牌花色
-        public Card.Suit gotBottomSuit { get; set; }
-        // 抢到底牌的玩家的亮牌
-        public List<Card> gotBottomShowCards;
-        // 记录是否有玩家抢底的flag
-        public bool hasBidder { get; set; }
-
-        // 当前炒底玩家
-        private int m_currentFryPlayerId;
-        public int currentFryPlayerId
-        {
-            get
-            {
-                return m_currentFryPlayerId;
-            }
-            set
-            {
-                m_currentFryPlayerId = value % playerNumber;
-            }
-        }
-        // 炒底亮牌数下界，下一玩家必须亮牌后总数必须比这个数多
-        public int fryCardLowerBound { get; set; }
-        // 超出 5 个亮牌数就算最大
-        private int m_fryCardLimit = 5;
-        // 累计已经有多少玩家跳过炒底；一旦有 3 个玩家选择不跟，则炒底结束；一旦有 1 个玩家跟，重置此计数器
-        public int skipFryCount { get; set; }
-        // 目前各玩家亮出的筹码牌
-        public List<Card>[] showCards;
-        // 各玩家上次亮出的筹码牌：4家都亮了或者不跟后复制showCards以更新一次
-        public List<Card>[] showCardsHistory;
-        // 已经炒底亮牌的人数
-        public int fryMoves;
-        // 庄家的 id
-        public List<int> bankerPlayerId;
-        // 最后（炒底）亮牌玩家的亮牌（用第一张牌来代表，因为亮牌都是同花色同点数的）
-        public Card lastFryShowCard;
-        // 最后（炒底）亮牌玩家ID
-        public int lastFryShowPlayerId;
-
-        // 庄家是否单打
-        public bool bankerIsFightAlone;
-        // 信号牌
-        public Card signCard;
-
-        // 这一轮已经出牌的玩家个数
-        private int m_handOutPlayerCount;
-        public int handOutPlayerCount
-        {
-            get
-            {
-                return m_handOutPlayerCount;
-            }
-            set
-            {
-                m_handOutPlayerCount = value % playerNumber;
-            }
-        }
-        // 当前轮数，4 个玩家都出 1 次牌为一轮
-        private int m_circle = 1;
-        public int circle
-        {
-            get { return m_circle; }
-            set { m_circle = value; }
-        }
-        // 4 个玩家本轮的出牌
-        public List<Card>[] handOutCards;
-        // 当前出牌最大玩家
-        public int biggestPlayerId;
-        // 当前每个玩家的分数
-        public int[] score;
-
-        // 当前盘数，出完手牌为 1 盘
-        private int m_round = 1;
-        public int round
-        {
-            get { return m_round; }
-            set { m_round = value; }
-        }
 
         /// <summary>
         /// 构造函数, 初始化荷官
         /// 获取 4 副牌
         /// </summary>
+        /// 
         public Dealer()
         {
             score = new int[4];
@@ -1188,6 +1134,9 @@ namespace GameUtility
             }
             bankerPlayerId = new List<int>();
         }
+        #endregion
+
+        #region DEAL
         // 洗牌
         public void Shuffle()
         {
@@ -1209,6 +1158,26 @@ namespace GameUtility
             Array.Copy(m_totalCard, bottomCardNumber, m_playerCard, 0, cardInHandInitialNumber * 4);
             Array.Copy(m_totalCard, m_bottom, bottomCardNumber);
         }
+
+        #endregion
+
+        // 抢底部分代码
+        #region BID
+        // 抢底阶段，当前所有玩家的亮牌
+        public List<Card>[] currentBidCards;
+        // 每个玩家当前的合法亮牌花色
+        //public List<Card.Suit>[] currentLegalBidColors;
+
+        // 抢到底牌的玩家 ID
+        public int gotBottomPlayerId { get; set; }
+        // 抢到底牌的玩家的亮牌花色
+        public Card.Suit gotBottomSuit { get; set; }
+        // 抢到底牌的玩家的亮牌
+        public List<Card> gotBottomShowCards;
+        // 记录是否有玩家抢底的flag
+        public bool hasBidder { get; set; }
+        // 记录 4 个玩家率先亮牌的顺序；bidOrder[0]=1 表示第一个亮牌的是玩家 id = 1
+        public int[] bidOrder = new int[playerNumber];
 
         // 抢底阶段：给出此玩家当前可以亮的花色，已知当前摸牌的数目
         public bool[] GetLegalBidColors(int playerId/*, int touchCardNumber*/)
@@ -1254,16 +1223,51 @@ namespace GameUtility
                         }
                     }
                 }
-                // 根据其他玩家已经亮的牌决定此玩家可以亮的花色
+
+                // 再根据其他玩家已经亮的牌决定此玩家可以亮的花色
                 for (int i = 0; i < legalBidColors.Length; i++)
                 {
                     // 如果先前认定这花色可以出
                     if (legalBidColors[i])
                     {
+                        // 抢底要求亮牌总数
+                        int bidNeedNumber;
+                        // 看看现在最大亮牌数是多少
+                        int maxBidNumber = currentBidCards.Max(cards => cards.Count);
+                     
+                        // 如果之前已经有人亮牌
+                        if (maxBidNumber > 0)
+                        {
+                            // 获得所有亮牌最多的玩家的 ID
+                            int[] allMaxBidPlayersId = Array.FindAll(new int[4] { 0, 1, 2, 3 }, id => currentBidCards[id].Count == maxBidNumber);
+                            // 获取这些亮牌最多的玩家的亮牌顺序
+                            int[] allMaxBidPlayersOrder = Array.ConvertAll(allMaxBidPlayersId, id => Array.IndexOf(bidOrder, id));
+                            // 找到该玩家的亮牌顺序
+                            int thisPlayerBidOrder = Array.IndexOf(bidOrder, playerId);
+                            // 如果所有亮牌最多的玩家都是在该玩家之后亮牌的
+                            if (allMaxBidPlayersOrder.Min() > thisPlayerBidOrder)
+                            {
+                                // 先亮主牌抢底者可以在同花色情况下逐张增加主牌张数保抢底权
+                                bidNeedNumber = maxBidNumber - currentBidCards[playerId].Count;
+
+                            }
+                            // 否则，如果有一个亮牌最多的玩家是在该玩家之前亮牌的
+                            else
+                            {
+                                // 后亮牌抢底者也只能在原来亮出的抢底主牌花色上增加主牌数来增加抢底机会
+                                bidNeedNumber = maxBidNumber + 1 - currentBidCards[playerId].Count;
+                            }
+                        }
+                        // 否则如果之前没人亮牌
+                        else
+                        {
+                            continue;
+                        }
+
                         // 计算这花色的摸牌，加上已经亮的牌，总共多少张
-                        // 只有当总数大于当前亮牌数最大的玩家，才可以出这个花色的牌
+                        // 只有当总数至少为要求数目，才可以出这个花色的牌
                         int totalNum = levelCards.Count(card => card.suit == (Card.Suit)i) + currentBidCards[playerId].Count;
-                        legalBidColors[i] = totalNum > currentBidCards.Max(cards => cards.Count);
+                        legalBidColors[i] = totalNum >= bidNeedNumber;
                     }
                 }
             }
@@ -1278,9 +1282,54 @@ namespace GameUtility
         //    return currentBidCards.Max(cards => cards.Count) + 1 - currentBidCards[playerId].Count;
         //}
         // 抢底阶段：亮牌帮助函数
-        public void BidHelper(int playerId, int currentTouchNumber, Card.Suit suit)
+        public void BidHelper(int playerId/*, int currentTouchNumber*/, Card.Suit suit)
         {
-            int bidNeedNumber = currentBidCards.Max(cards => cards.Count) + 1 - currentBidCards[playerId].Count;
+            int bidNeedNumber;
+            // 检查当前亮牌玩家是否已经亮过牌
+            if (currentBidCards[playerId].Count > 0)
+            {
+
+            }
+            // 如果还没有亮牌
+            else
+            {
+                // 记录他的亮牌顺序
+                int idx = Array.IndexOf(bidOrder, -1);
+                bidOrder[idx] = playerId;
+            }
+
+            // 看看现在最大亮牌数是多少
+            int maxBidNumber = currentBidCards.Max(cards => cards.Count);
+
+            // 如果现在最大亮牌数是 0 ，说明还没有人亮牌
+            if (maxBidNumber == 0)
+            {
+                 bidNeedNumber = 1;
+
+            }
+            // 否则，就说明之前已经有人亮牌
+            else
+            {
+                // 获得所有亮牌最多的玩家的 ID
+                int[] allMaxBidPlayersId = Array.FindAll(new int[4] { 0, 1, 2, 3 }, id => currentBidCards[id].Count == maxBidNumber);
+                // 获取这些亮牌最多的玩家的亮牌顺序
+                int[] allMaxBidPlayersOrder = Array.ConvertAll(allMaxBidPlayersId, id => Array.IndexOf(bidOrder, id));
+                // 找到该玩家的亮牌顺序
+                int thisPlayerBidOrder = Array.IndexOf(bidOrder, playerId);
+                // 如果所有亮牌最多的玩家都是在该玩家之后亮牌的
+                if (allMaxBidPlayersOrder.Min() > thisPlayerBidOrder)
+                {
+                    // 先亮主牌抢底者可以在同花色情况下逐张增加主牌张数保抢底权
+                    bidNeedNumber = maxBidNumber - currentBidCards[playerId].Count;
+                }
+                // 否则，如果有一个亮牌最多的玩家是在该玩家之前亮牌的
+                else
+                {
+                    // 后亮牌抢底者也只能在原来亮出的抢底主牌花色上增加主牌数来增加抢底机会
+                    bidNeedNumber = maxBidNumber + 1 - currentBidCards[playerId].Count;
+                }
+            }
+
             // 构造一张级牌
             Card levelCard = new Card(suit, playerLevels[playerId] - 1);
             for (int i = 0; i < bidNeedNumber; i++)
@@ -1301,6 +1350,59 @@ namespace GameUtility
             hasBidder = true;
         }
 
+
+        // 判断是否不可能有更高出价者(抢底阶段)
+        public bool NoHigherBid()
+        {
+            bool hasHigerBid = false;
+            for (int i = 0; i < playerNumber; i++)
+            {
+                bool[] legalBidColors = GetLegalBidColors(i);
+                for (int j = 0; j < legalBidColors.Length; j++)
+                {
+                    hasHigerBid |= legalBidColors[j];
+                }
+            }
+            // 当没有更高筹码，或者只有一个台上方玩家时，认为不需要再进行抢底
+            return !hasHigerBid || upperPlayersId.Length == 1;
+        }
+
+        #endregion
+
+        #region FRY
+        // 当前炒底玩家
+        private int m_currentFryPlayerId;
+        public int currentFryPlayerId
+        {
+            get
+            {
+                return m_currentFryPlayerId;
+            }
+            set
+            {
+                m_currentFryPlayerId = value % playerNumber;
+            }
+        }
+        // 炒底亮牌数下界，下一玩家必须亮牌后总数必须比这个数多
+        public int fryCardLowerBound { get; set; }
+        // 超出 5 个亮牌数就算最大
+        private int m_fryCardLimit = 5;
+        // 累计已经有多少玩家跳过炒底；一旦有 3 个玩家选择不跟，则炒底结束；一旦有 1 个玩家跟，重置此计数器
+        public int skipFryCount { get; set; }
+        // 目前各玩家亮出的筹码牌
+        public List<Card>[] showCards;
+        // 各玩家上次亮出的筹码牌：4家都亮了或者不跟后复制showCards以更新一次
+        public List<Card>[] showCardsHistory;
+        // 已经炒底亮牌的人数
+        public int fryMoves;
+        // 庄家的 id
+        public List<int> bankerPlayerId;
+        // 最后（炒底）亮牌玩家的亮牌（用第一张牌来代表，因为亮牌都是同花色同点数的）
+        public Card lastFryShowCard;
+        // 最后（炒底）亮牌玩家ID
+        public int lastFryShowPlayerId;
+
+
         // 清空炒底阶段亮牌记录
         public void ClearShowCards()
         {
@@ -1311,11 +1413,75 @@ namespace GameUtility
             }
         }
 
+
+        /// <summary>
+        /// 判断炒底出牌是否合法
+        /// </summary>
+        /// <param name="addFryCards">炒底出牌</param>
+        /// <param name="playerID">玩家编号</param>
+        /// <returns></returns>
+        public bool fryCompare(Card[] addFryCards, int playerID)
+        {
+            //判断整齐性
+            Card temp = new Card(addFryCards[0].suit, addFryCards[0].points);
+            for (int i = 0; i < addFryCards.Length; i++)
+            {
+                if (addFryCards[i].suit != temp.suit || addFryCards[i].points != temp.points)
+                    return false;
+            }
+
+            //判断是否为台上方级数牌
+            if (!isUpperNumber(temp.points + 1) && temp.suit != Card.Suit.Joker0 && temp.suit != Card.Suit.Joker1)
+                return false;
+            Console.WriteLine("lastFryShowPlayerId" + lastFryShowPlayerId);
+
+            //和最大牌比大小，先比数量，再比牌面
+            List<Card> formerCard = new List<Card>();
+            if (lastFryShowPlayerId == -1)
+            {
+                gotBottomShowCards.ForEach(a => formerCard.Add(a));
+            }
+            else
+            {
+                showCards[lastFryShowPlayerId].ForEach(a => formerCard.Add(a));
+            }
+
+            if (addFryCards.Count() > formerCard.Count())
+            {
+                return true;
+            }
+            else if (addFryCards.Count() == formerCard.Count())
+            {
+                if (temp.suit == Card.Suit.Joker1 ||
+                    (temp.suit == Card.Suit.Joker0 && formerCard.Last().suit != Card.Suit.Joker1 && formerCard.Last().suit != Card.Suit.Joker0))
+                {
+                    return true;
+                }
+                else
+                    return false;
+            }
+            else
+                return false;
+        }
+
         // 判断炒底时增加的筹码牌是否合法
         public Judgement IsLegalShow(Card[] addFryCards, int playerId)
         {
 #if (FRY)
-
+            // 测试：总亮牌数比前一个炒底玩家的多就行
+            bool isValid;
+            isValid = fryCompare(addFryCards, playerId);
+            Console.WriteLine("判断完合法性");
+            string message;
+            if (isValid)
+            {
+                message = "合法亮牌";
+            }
+            else
+            {
+                message = "筹码不够大";
+            }
+            return new Judgement(message, isValid);
 #else
             // 测试：总亮牌数比前一个炒底玩家的多就行
             bool isValid;
@@ -1339,7 +1505,44 @@ namespace GameUtility
         public Judgement IsLegalBury(Card[] cards)
         {
 #if (FRY)
+            string message;
+            bool isValid;
+            //牌数不为8张则不合法
+            if (cards.Length != bottomCardNumber)
+            {
+                message = "必须埋 8 张底牌";
+                isValid = false;
+                return new Judgement(message, isValid);
+            }
 
+            for (int i = 0; i < cards.Length; i++)
+            {
+                //存在大王、小王或台上主级牌且该台上牌为非分牌则不合法
+                if (cards[i].suit == Card.Suit.Joker0 || cards[i].suit == Card.Suit.Joker1 ||
+                    (isUpperNumber(cards[i].points + 1) && cards[i].points != 4 && cards[i].points != 9 && cards[i].points != 12))
+                {
+                    message = "存在大王、小王或台上主级牌且该台上牌为非分牌";
+                    isValid = false;
+                    return new Judgement(message, isValid);
+                }
+                //若存在台上方级数牌且为分牌，则必须所有非台上方级数牌分牌出完才能埋该牌
+                else if (isUpperNumber(cards[i].points + 1) && (cards[i].points == 4 || cards[i].points == 9 || cards[i].points == 12))
+                {
+                    int[] scorecard = { 4, 9, 12 };
+                    for (int k = 0; k < 3; k++)
+                        if (!isUpperNumber(scorecard[k] + 1))
+                            for (int j = 0; j < cards.Length; j++)
+                                if (cards[j].points == scorecard[k])
+                                {
+                                    message = "不存在台上方级数牌且为分牌，或者并非所有非台上方级数牌分牌出完";
+                                    isValid = false;
+                                    return new Judgement(message, isValid);
+                                }
+                }
+            }
+            message = "合法埋底";
+            isValid = true;
+            return new Judgement(message, isValid);
 #else
             bool isValid = cards.Length == bottomCardNumber;
             string message;
@@ -1354,6 +1557,314 @@ namespace GameUtility
             return new Judgement(message, isValid);
 #endif
         }
+
+
+        // 炒底阶段：判断是否不可能有更高筹码者
+        //public bool NoHigerFry()
+        //{
+        //    // 测试：当要求亮牌不比最大亮牌数小时，判定已经没有更高筹码了
+        //    return fryCardLowerBound >= m_fryCardLimit;
+        //}
+
+        //// 判断是否不可能有更高出价者(炒底阶段)
+        //public bool NoHigherFry()
+        //{
+        //    return fryCardLowerBound >= m_fryCardLimit;
+        //}
+        //// 是否所有玩家跳过炒底阶段
+        //public bool AllSkipFry()
+        //{
+        //    return true;
+        //}
+        // 判断是否结束炒底
+        public bool FryEnd()
+        {
+#if (FRY)
+            bool allSkipFry = skipFryCount >= playerNumber - 1;
+
+            if (allSkipFry)
+            {
+                Console.WriteLine("所有玩家跳过炒牌, 炒底结束");
+            }
+            return allSkipFry;
+#else
+            // 测试：当要求亮牌不比最大亮牌数小时，判定已经没有更高筹码了
+            //bool noHigherFry = fryCardLowerBound >= m_fryCardLimit;
+            bool allSkipFry = skipFryCount >= playerNumber - 1;
+            //if (noHigherFry)
+            //{
+            //    Console.WriteLine("不可能有更高出价者, 炒底结束");
+            //}
+            if (allSkipFry)
+            {
+                Console.WriteLine("所有玩家跳过炒牌, 炒底结束");
+            }
+            return /*noHigherFry || */allSkipFry;
+#endif
+        }
+
+        /// <summary>
+        /// 更新炒底亮牌历史记录
+        /// </summary>
+        public void UpdateFryShowHistory()
+        {
+#if (FRY)
+            fryMoves++;
+            // 如果炒了一圈
+            if (fryMoves % playerNumber == 0)
+            {
+                //showCards.CopyTo(showCardsHistory, 0);
+                // 深复制
+                for (int i = 0; i < showCards.Length; i++)
+                {
+                    showCardsHistory[i] = new List<Card>(showCards[i]);
+                }
+            }
+#else
+
+#endif
+        }
+
+
+        /// <summary>
+        /// 判断是否为台上方的级数牌
+        /// </summary>
+        /// <param name="level">某数字</param>
+        /// <returns></returns>
+        public bool isUpperNumber(int level)
+        {
+            bool flag = false;
+            for (int i = 0; i < m_upperPlayersId.Count(); i++)
+            {
+                if (level == playerLevels[m_upperPlayersId[i]])
+                {
+                    flag = true;
+                    break;
+                }
+            }
+            return flag;
+
+        }
+        /// <summary>
+        /// 炒底阶段，帮指定玩家代理亮牌
+        /// </summary>
+        /// <param name="playerId">当前玩家</param>
+        /// <returns>有得炒则返回Card[],否则返回空的Card[]！！！！！</returns>
+        public Card[] AutoAddShowCard(int playerId)
+        {
+#if (FRY)
+            //找所有台上方级数牌和大小王，判断是否合法，合法则返回
+            CardList playershandcard = new CardList();
+            playershandcard = ListCardToCardList(playersHandCard[playerId]);
+            Card[] addShowCards = new Card[2];
+
+            List<Card> formerCard = new List<Card>();
+            if (lastFryShowPlayerId == -1)
+            {
+                gotBottomShowCards.ForEach(a => formerCard.Add(a));
+            }
+            else
+            {
+                showCards[lastFryShowPlayerId].ForEach(a => formerCard.Add(a));
+            }
+
+
+            for (int i = 0; i < m_upperPlayersId.Count(); i++)
+            {
+                //台上方级数牌
+                //构造四种花色的台上方级数牌，方便得到这四种花色对应的下标
+                Card[] temp = new Card[4];
+                for (int k = 0; k < 4; k++)
+                {
+                    temp[k] = new Card((Card.Suit)k, playerLevels[m_upperPlayersId[i]] - 1);
+                }
+                //确定这四种花色的台上方级数牌是否数量足够
+                for (int j = 0; j < 4; j++)
+                    if (playershandcard.data[temp[j].CardToIndex()] > formerCard.Count())
+                    {
+                        int n = playershandcard.data[temp[j].CardToIndex()];
+                        addShowCards = new Card[n];
+                        for (int k = 0; k < n; k++)
+                        {
+                            addShowCards[k] = new Card((Card.Suit)j, temp[j].points);
+                        }
+                        return addShowCards;
+                    }
+                //小王
+                if (playershandcard.data[52] >= formerCard.Count() && formerCard.Last().points != 13)
+                {
+                    int n = playershandcard.data[52];
+                    addShowCards = new Card[n];
+                    for (int k = 0; k < n; k++)
+                    {
+                        addShowCards[k] = new Card((Card.Suit)4, 13);
+                    }
+                    return addShowCards;
+
+                }
+                if (playershandcard.data[53] >= formerCard.Count() && formerCard.Last().suit != Card.Suit.Joker1)
+                {
+                    int n = playershandcard.data[53];
+                    addShowCards = new Card[n];
+                    for (int k = 0; k < n; k++)
+                    {
+                        addShowCards[k] = new Card((Card.Suit)5, 13);
+                    }
+                    return addShowCards;
+                }
+            }
+            Console.WriteLine("没有合适的牌可以炒");
+            addShowCards = new Card[0];
+            return addShowCards;
+
+#else
+            // 随便找到合法的亮牌给玩家
+            // 如果已经没有合法的亮牌了
+            if (fryCardLowerBound >= m_fryCardLimit)
+            {
+                return new Card[0];
+            }
+            // 否则，如果还有的亮
+            else
+            {
+                // 随便从玩家的手牌中抽出比亮牌下界多一张牌
+                Card[] showCardTips = new Card[fryCardLowerBound + 1];
+                playersHandCard[playerId].CopyTo(0, showCardTips, 0, showCardTips.Length);
+                return showCardTips;
+            }
+#endif
+        }
+
+        // 炒底阶段，帮指定玩家代理埋底
+        public Card[] AutoBuryCard(int playerId)
+        {
+#if (FRY)
+            Card[] buryCards = new Card[bottomCardNumber];
+            // 从手牌中选取
+
+            List<Card> temp = new List<Card>();
+            foreach (Card a in playersHandCard[playerId])
+            {
+                //去掉手牌中的大小王，台上且非分牌
+                if (a.suit != Card.Suit.Joker0 && a.suit != Card.Suit.Joker1 &&
+                    (!isUpperNumber(a.points + 1) || a.points == 4 || a.points == 9 || a.points == 12))
+                    temp.Add(a);
+            }
+
+            //若剩下的牌中非台上分牌足够8张，去掉剩下的台上分牌
+            int count = 0;
+            foreach (Card a in temp)
+            {
+                //计算非台上分牌数目
+                if (!isUpperNumber(a.points + 1) && (a.points == 4 || a.points == 9 || a.points == 12))
+                    count++;
+            }
+            if (count >= bottomCardNumber)
+            {
+                foreach (Card a in temp)
+                {
+                    if (isUpperNumber(a.points + 1) && (a.points == 4 || a.points == 9 || a.points == 12))
+                        temp.Remove(a);
+                }
+            }
+
+            //则只有台下分牌不够8张（本身概率很小），且抽到台上非分牌（概率比原先小很多）而分牌没有全出时才会 !islegalbury 
+            Card[] tempCards = temp.ToArray();
+            while (true)
+            {
+                //Random rnd = new Random();
+                //buryCards = temp.OrderBy(x => rnd.Next()).Take(bottomCardNumber).ToArray();
+
+                Card.Shuffle(tempCards);
+                buryCards = tempCards.Take(bottomCardNumber).ToArray();
+
+                if (IsLegalBury(buryCards).isValid)
+                    return buryCards;
+            }
+#else
+            // 随便从玩家的手中选 8 张牌作为提示
+            Card[] buryCardTips = new Card[bottomCardNumber];
+            playersHandCard[playerId].CopyTo(0, buryCardTips, 0, bottomCardNumber);
+            return buryCardTips;
+#endif
+        }
+
+        #endregion
+
+        #region FINDFRIEND
+
+        // 生成信号牌
+        // 随机抽一张非硬主的牌
+        public void GenerateSignCard()
+        {
+#if (FINDFRIEND)
+            // 获取一副牌
+            List<Card> cardSet = new List<Card>(Card.GetCardSet());
+            // 首先不能抽大小王
+            cardSet.Remove(new Card(Card.Suit.Joker0, 13));
+            cardSet.Remove(new Card(Card.Suit.Joker1, 13));
+            // 其次，不能抽点数是台上方玩家级数的牌
+            for (int i = 0; i < m_upperPlayersId.Length; i++)
+            {
+                cardSet.RemoveAll(card => card.points == playerLevels[m_upperPlayersId[i]]);
+            }
+            // 然后随机抽
+            Random rdn = new Random();
+            int idx = rdn.Next() % cardSet.Count;
+            signCard = cardSet[idx];
+#else
+            // 随便抽一张牌
+            // 获取一副牌
+            List<Card> cardSet = new List<Card>(Card.GetCardSet());
+            // 然后随机抽
+            Random rdn = new Random();
+            int idx = rdn.Next() % cardSet.Count;
+            signCard = cardSet[idx];
+#endif
+        }
+        #endregion
+
+        #region FIGHT
+        // 庄家是否单打
+        public bool bankerIsFightAlone;
+        // 信号牌
+        public Card signCard;
+
+        // 这一轮已经出牌的玩家个数
+        private int m_handOutPlayerCount;
+        public int handOutPlayerCount
+        {
+            get
+            {
+                return m_handOutPlayerCount;
+            }
+            set
+            {
+                m_handOutPlayerCount = value % playerNumber;
+            }
+        }
+        // 当前轮数，4 个玩家都出 1 次牌为一轮
+        private int m_circle = 1;
+        public int circle
+        {
+            get { return m_circle; }
+            set { m_circle = value; }
+        }
+        // 4 个玩家本轮的出牌
+        public List<Card>[] handOutCards;
+        // 当前出牌最大玩家
+        public int biggestPlayerId;
+        // 当前每个玩家的分数
+        public int[] score;
+
+        // 当前盘数，出完手牌为 1 盘
+        private int m_round = 1;
+        public int round
+        {
+            get { return m_round; }
+            set { m_round = value; }
+        }
+
 
         // Player到RulePlayer的转换
         RulePlayer[] PlayerToRulePlayer(PlayerInfo[] res)
@@ -3251,6 +3762,93 @@ namespace GameUtility
 #endif
         }
 
+        // 判断是否所有玩家的手牌为空
+        public bool AllPlayersHandEmpty()
+        {
+            // 对于每一个玩家
+            for (int i = 0; i < playersHandCard.Length; i++)
+            {
+                // 如果他还有手牌
+                if (playersHandCard[i].Count > 0)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+
+        // 更新台上方玩家
+        public void UpdateUpperPlayers()
+        {
+#if (FIGHT)
+
+#else
+            if (m_round == 1)    // 如果是首盘
+            {
+                // 所有玩家都是台上方
+                m_upperPlayersId = new int[4] { 0, 1, 2, 3 };
+            }
+            else// 如果不是首盘
+            {
+
+            }
+#endif
+        }
+
+        // 更新首家
+        public void UpdateFirstHome()
+        {
+#if (FIGHT)
+            //firstHomePlayerId = 0;
+            firstHomePlayerId = biggestPlayerId;
+#else
+
+#endif
+        }
+        // 更新首家
+        public void UpdateFirstHome(int res)
+        {
+#if (FIGHT)
+            firstHomePlayerId = res;
+
+#else
+
+#endif
+        }
+
+        // 对战阶段，帮指定玩家代理出牌
+        public Card[] AutoHandOut(int playerId)
+        {
+#if (FIGHT)
+
+#else
+            Card[] handOutCards;
+            if (playersHandCard[playerId].Count > 0)
+            {
+                // 测试：选择指定长度的牌
+                if (dealRequiredLength <= 0)
+                {
+                    handOutCards = new Card[1];
+                    Array.Copy(playersHandCard[playerId].ToArray(), handOutCards, 1);
+                }
+                else
+                {
+                    handOutCards = new Card[dealRequiredLength];
+                    Array.Copy(playersHandCard[playerId].ToArray(), handOutCards, dealRequiredLength);
+                }
+                return handOutCards;
+            }
+            else
+            {
+                return new Card[0];
+            }
+#endif
+        }
+
+        #endregion
+
+        #region SCORE
         /// <summary>
         /// 计算每圈后的得分
         /// </summary>
@@ -3416,7 +4014,7 @@ namespace GameUtility
             // 测试：暂且不升级
 #endif
         }
-
+        #endregion
 
         public void SetCurrentPlayerId(int id)
         {
@@ -3451,102 +4049,7 @@ namespace GameUtility
             }
         }
 
-        // 判断是否所有玩家的手牌为空
-        public bool AllPlayersHandEmpty()
-        {
-            // 对于每一个玩家
-            for (int i = 0; i < playersHandCard.Length; i++)
-            {
-                // 如果他还有手牌
-                if (playersHandCard[i].Count > 0)
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        // 判断是否不可能有更高出价者(抢底阶段)
-        public bool NoHigherBid()
-        {
-            bool hasHigerBid = false;
-            for (int i = 0; i < playerNumber; i++)
-            {
-                bool[] legalBidColors = GetLegalBidColors(i);
-                for (int j = 0; j < legalBidColors.Length; j++)
-                {
-                    hasHigerBid |= legalBidColors[j];
-                }
-            }
-            // 当没有更高筹码，或者只有一个台上方玩家时，认为不需要再进行抢底
-            return !hasHigerBid || upperPlayersId.Length == 1;
-        }
-
-        // 炒底阶段：判断是否不可能有更高筹码者
-        //public bool NoHigerFry()
-        //{
-        //    // 测试：当要求亮牌不比最大亮牌数小时，判定已经没有更高筹码了
-        //    return fryCardLowerBound >= m_fryCardLimit;
-        //}
-
-        //// 判断是否不可能有更高出价者(炒底阶段)
-        //public bool NoHigherFry()
-        //{
-        //    return fryCardLowerBound >= m_fryCardLimit;
-        //}
-        //// 是否所有玩家跳过炒底阶段
-        //public bool AllSkipFry()
-        //{
-        //    return true;
-        //}
-        // 判断是否结束炒底
-        public bool FryEnd()
-        {
-#if (FRY)
-            bool allSkipFry = skipFryCount >= playerNumber - 1;
-
-            if (allSkipFry)
-            {
-                Console.WriteLine("所有玩家跳过炒牌, 炒底结束");
-            }
-            return allSkipFry;
-#else
-            // 测试：当要求亮牌不比最大亮牌数小时，判定已经没有更高筹码了
-            //bool noHigherFry = fryCardLowerBound >= m_fryCardLimit;
-            bool allSkipFry = skipFryCount >= playerNumber - 1;
-            //if (noHigherFry)
-            //{
-            //    Console.WriteLine("不可能有更高出价者, 炒底结束");
-            //}
-            if (allSkipFry)
-            {
-                Console.WriteLine("所有玩家跳过炒牌, 炒底结束");
-            }
-            return /*noHigherFry || */allSkipFry;
-#endif
-        }
-
-        /// <summary>
-        /// 更新炒底亮牌历史记录
-        /// </summary>
-        public void UpdateFryShowHistory()
-        {
-#if (FRY)
-            fryMoves++;
-            // 如果炒了一圈
-            if (fryMoves % playerNumber == 0)
-            {
-                //showCards.CopyTo(showCardsHistory, 0);
-                // 深复制
-                for (int i = 0; i < showCards.Length; i++)
-                {
-                    showCardsHistory[i] = new List<Card>(showCards[i]);
-                }
-            }
-#else
-
-#endif
-        }
+        #region UPDATE_BANKER
 
         // 从指定玩家 ID 开始，逆序找上一个台上方玩家
         int GetLastUpperPlayerId(int id)
@@ -3588,17 +4091,10 @@ namespace GameUtility
         /// </summary>
         public void UpdateBankerBid()
         {
-#if (BID)
             // 清空庄家列表
             bankerPlayerId.Clear();
             // 抢到底牌的为庄家
             bankerPlayerId.Add(gotBottomPlayerId);
-#else
-            // 清空庄家列表
-            bankerPlayerId.Clear();
-            // 抢到底牌的为庄家
-            bankerPlayerId.Add(gotBottomPlayerId);
-#endif
         }
         /// <summary>
         /// 检查某玩家是否为台上方玩家
@@ -3816,48 +4312,9 @@ namespace GameUtility
 #endif
         }
 
-        // 更新台上方玩家
-        public void UpdateUpperPlayers()
-        {
-#if (FIGHT)
-
-#else
-            if (m_round == 1)    // 如果是首盘
-            {
-                // 所有玩家都是台上方
-                m_upperPlayersId = new int[4] { 0, 1, 2, 3 };
-            }
-            else// 如果不是首盘
-            {
-
-            }
-#endif
-        }
-
-        // 更新首家
-        public void UpdateFirstHome()
-        {
-#if (FIGHT)
-            //firstHomePlayerId = 0;
-            firstHomePlayerId = biggestPlayerId;
-#else
-
-#endif
-        }
-        // 更新首家
-        public void UpdateFirstHome(int res)
-        {
-#if (FIGHT)
-            firstHomePlayerId = res;
-
-#else
-
-#endif
-        }
         // 对战阶段更新庄家；出了信号牌的人为庄家
         public void UpdateBankerFight(Card[] dealCards)
         {
-#if (FIGHT)
             // 如果庄家不选择单打，并且现在只有 1 个庄家
             if (!bankerIsFightAlone && bankerPlayerId.Count < 2)
             {
@@ -3882,11 +4339,11 @@ namespace GameUtility
                     signCard = null;
                 }
             }
-#else
-
-#endif
         }
 
+        #endregion
+
+        #region UPDATE_MAIN
         // 发牌结束，更新主牌信息
         public void UpdateMainDeal()
         {
@@ -4065,227 +4522,9 @@ namespace GameUtility
 
 #endif
         }
+        #endregion
 
-        // 生成信号牌
-        // 随机抽一张非硬主的牌
-        public void GenerateSignCard()
-        {
-            // 获取一副牌
-            List<Card> cardSet = new List<Card>(Card.GetCardSet());
-            // 首先不能抽大小王
-            cardSet.Remove(new Card(Card.Suit.Joker0, 13));
-            cardSet.Remove(new Card(Card.Suit.Joker1, 13));
-            // 其次，不能抽点数是台上方玩家级数的牌
-            for (int i = 0; i < m_upperPlayersId.Length; i++)
-            {
-                cardSet.RemoveAll(card => card.points == playerLevels[m_upperPlayersId[i]]);
-            }
-            // 然后随机抽
-            Random rdn = new Random();
-            int idx = rdn.Next() % cardSet.Count;
-            signCard = cardSet[idx];
-        }
-
-        //// 炒底阶段，帮指定玩家代理亮牌
-        //public Card[] AutoAddShowCard(int playerId)
-        //{
-        //    // 随意选择合法的亮牌
-        //    // 测试：牌数比最低筹码大即为合法亮牌
-        //    int n = fryCardLowerBound + 1 - showCards[playerId].Count;
-        //    Card[] addShowCards = new Card[n];
-        //    // 从手牌中选取
-        //    Array.Copy(playersHandCard[playerId].ToArray(), addShowCards, n);
-        //    return addShowCards;
-        //}
-
-
-        /// <summary>
-        /// 判断是否为台上方的级数牌
-        /// </summary>
-        /// <param name="level">某数字</param>
-        /// <returns></returns>
-        public bool isUpperNumber(int level)
-        {
-            bool flag = false;
-            for (int i = 0; i < m_upperPlayersId.Length; i++)
-            {
-                if (level == playerLevels[m_upperPlayersId[i]])
-                {
-                    flag = true;
-                    break;
-                }
-            }
-            return flag;
-
-        }
-
-        /// <summary>
-        /// 炒底阶段，帮指定玩家代理亮牌
-        /// </summary>
-        /// <param name="playerId">当前玩家</param>
-        /// <returns>有得炒则返回Card[],否则返回空的Card[]！！！！！</returns>
-        public Card[] AutoAddShowCard(int playerId)
-        {
-#if (FRY)
-            //找所有台上方级数牌和大小王，判断是否合法，合法则返回
-            CardList playershandcard = new CardList();
-            playershandcard = ListCardToCardList(playersHandCard[playerId]);
-            Card[] addShowCards = new Card[2];
-
-            List<Card> formerCard = new List<Card>();
-            if (lastFryShowPlayerId == -1)
-            {
-                gotBottomShowCards.ForEach(a => formerCard.Add(a));
-            }
-            else
-            {
-                showCards[lastFryShowPlayerId].ForEach(a => formerCard.Add(a));
-            }
-
-
-            for (int i = 0; i < m_upperPlayersId.Count(); i++)
-            {
-                //台上方级数牌
-                int temp = playerLevels[m_upperPlayersId[i]] - 1;
-                int[] tempcard = { temp, temp + 13, temp + 26, temp + 39 };
-                for (int j = 0; j < 4; j++)
-                    if (playershandcard.data[tempcard[j]] > formerCard.Count())
-                    {
-                        int n = playershandcard.data[tempcard[j]];
-                        addShowCards = new Card[n];
-                        for (int k = 0; k < n; k++)
-                        {
-                            addShowCards[k] = new Card((Card.Suit)j, temp);
-                        }
-                        return addShowCards;
-                    }
-                //小王
-                if (playershandcard.data[52] >= formerCard.Count() && formerCard.Last().points != 13)
-                {
-                    int n = playershandcard.data[52];
-                    addShowCards = new Card[n];
-                    for (int k = 0; k < n; k++)
-                    {
-                        addShowCards[k] = new Card((Card.Suit)4, temp);
-                    }
-                    return addShowCards;
-
-                }
-                if (playershandcard.data[53] >= formerCard.Count() && formerCard.Last().suit != Card.Suit.Joker1)
-                {
-                    int n = playershandcard.data[53];
-                    addShowCards = new Card[n];
-                    for (int k = 0; k < n; k++)
-                    {
-                        addShowCards[k] = new Card((Card.Suit)5, temp);
-                    }
-                    return addShowCards;
-                }
-            }
-            Console.WriteLine("没有合适的牌可以炒");
-            addShowCards = new Card[0];
-            return addShowCards;
-#else
-            // 随便找到合法的亮牌给玩家
-            // 如果已经没有合法的亮牌了
-            if(fryCardLowerBound >= m_fryCardLimit)
-            {
-                return new Card[0];
-            }
-            // 否则，如果还有的亮
-            else
-            {
-                // 随便从玩家的手牌中抽出比亮牌下界多一张牌
-                Card[] showCardTips = new Card[fryCardLowerBound + 1];
-                playersHandCard[playerId].CopyTo(0, showCardTips, 0, showCardTips.Length);
-                return showCardTips;
-            }
-#endif
-        }
-
-        // 炒底阶段，帮指定玩家代理埋底
-        public Card[] AutoBuryCard(int playerId)
-        {
-#if (FRY)
-            Card[] buryCards = new Card[bottomCardNumber];
-            // 从手牌中选取
-
-            List<Card> temp = new List<Card>();
-            foreach (Card a in playersHandCard[playerId])
-            {
-                //去掉手牌中的大小王，台上且非分牌
-                if (a.suit != Card.Suit.Joker0 && a.suit != Card.Suit.Joker1 &&
-                    (!isUpperNumber(a.points + 1) || a.points == 4 || a.points == 9 || a.points == 12))
-                    temp.Add(a);
-            }
-
-            //若剩下的牌中非台上分牌足够8张，去掉剩下的台上分牌
-            int count = 0;
-            foreach (Card a in temp)
-            {
-                //计算非台上分牌数目
-                if (!isUpperNumber(a.points + 1) && (a.points == 4 || a.points == 9 || a.points == 12))
-                    count++;
-            }
-            if (count >= bottomCardNumber)
-            {
-                foreach (Card a in temp)
-                {
-                    if (isUpperNumber(a.points + 1) && (a.points == 4 || a.points == 9 || a.points == 12))
-                        temp.Remove(a);
-                }
-            }
-
-            //则只有台下分牌不够8张（本身概率很小），且抽到台上非分牌（概率比原先小很多）而分牌没有全出时才会 !islegalbury 
-            Card[] tempCards = temp.ToArray();
-            while (true)
-            {
-                //Random rnd = new Random();
-                //buryCards = temp.OrderBy(x => rnd.Next()).Take(bottomCardNumber).ToArray();
-
-                Card.Shuffle(tempCards);
-                buryCards = tempCards.Take(bottomCardNumber).ToArray();
-
-                if (IsLegalBury(buryCards).isValid)
-                    return buryCards;
-            }
-#else
-            // 随便从玩家的手中选 8 张牌作为提示
-            Card[] buryCardTips = new Card[bottomCardNumber];
-            playersHandCard[playerId].CopyTo(0, buryCardTips, 0, bottomCardNumber);
-            return buryCardTips;
-#endif
-        }
-
-        // 对战阶段，帮指定玩家代理出牌
-        public Card[] AutoHandOut(int playerId)
-        {
-#if (FIGHT)
-
-#else
-            Card[] handOutCards;
-            if (playersHandCard[playerId].Count > 0)
-            {
-                // 测试：选择指定长度的牌
-                if (dealRequiredLength <= 0)
-                {
-                    handOutCards = new Card[1];
-                    Array.Copy(playersHandCard[playerId].ToArray(), handOutCards, 1);
-                }
-                else
-                {
-                    handOutCards = new Card[dealRequiredLength];
-                    Array.Copy(playersHandCard[playerId].ToArray(), handOutCards, dealRequiredLength);
-                }
-                return handOutCards;
-            }
-            else
-            {
-                return new Card[0];
-            }
-#endif
-        }
-
+        #region TRANSITION
         /// <summary>
         /// 准备就绪到发牌的过渡阶段
         /// </summary>
@@ -4308,11 +4547,20 @@ namespace GameUtility
             {
                 currentBidCards[i].Clear();
             }
+            for(int i = 0; i < bidOrder.Length; i++)
+            {
+                bidOrder[i] = -1;
+            }
 
             // 用负数指示没有玩家抢底
             gotBottomPlayerId = -1;
             // 暂时还没有人抢底
             hasBidder = false;
+
+#if (DEBUG_BID_1)
+            m_upperPlayersId = new int[2] { 1, 3 };
+#endif
+
         }
 
         /// <summary>
@@ -4434,6 +4682,7 @@ namespace GameUtility
             // 清空庄家 ID
             bankerPlayerId.Clear();
         }
+        #endregion
 
         /// <summary>
         /// 荷官更新函数

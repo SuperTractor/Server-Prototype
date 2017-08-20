@@ -246,7 +246,27 @@ namespace GameUtility
                 return points == other.points && suit == other.suit;
             }
         }
+        public static bool operator ==(Card c1, Card c2)
+        {
+            // If both are null, or both are same instance, return true.
+            if (ReferenceEquals(c1, c2))
+            {
+                return true;
+            }
+            else
+            {
+                if ((object)c1 == null || (object)c2 == null)
+                    return false;
+                else
+                    return c1.points == c2.points && c1.suit == c2.suit;
+            }
 
+        }
+
+        public static bool operator !=(Card c1, Card c2)
+        {
+            return !(c1 == c2);
+        }
         // 延迟输出牌组, 用于抢底时, 显示手牌, 模拟摸牌效果
         static public void DelayPrint(List<Card> deck,int milliseconds)
         {

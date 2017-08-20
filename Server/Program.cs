@@ -5,6 +5,11 @@
 //#define RULE
 #undef RULE
 
+// 调试抢底
+//#define DEBUG_BID_1
+#undef DEBUG_BID_1
+
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -74,13 +79,14 @@ namespace server_0._0._1
 
         // 当前应该显示牌数
         static int m_handCardShowNumber;
-        // 抢底阶段显示手牌的延迟(毫秒)
-        static int m_touchCardDelay = 1;
+
         // 用于辅助模拟摸牌效果的计时器
         static Stopwatch m_touchCardStopwatch;
         // 用于最后抢底阶段的计时器
         static Stopwatch m_lastBidStopwatch;
 #if (RULE)
+                // 抢底阶段显示手牌的延迟(毫秒)
+        static int m_touchCardDelay = 1;
         // 最后抢底阶段有的思考时间（毫秒）
         static int m_lastBidDelay = 5000;
                 // 抢底阶段：庄家埋底思考时间
@@ -98,6 +104,8 @@ namespace server_0._0._1
                 // 玩家拥有的出牌思考时间(毫秒)
         static int m_handOutTimeLimit = 100000000;
 #else
+        // 抢底阶段显示手牌的延迟(毫秒)
+        static int m_touchCardDelay = 1000;
         // 最后抢底阶段有的思考时间（毫秒）
         static int m_lastBidDelay = 5000;
         // 抢底阶段：庄家埋底思考时间
@@ -421,6 +429,13 @@ namespace server_0._0._1
             {
                 m_dealer.playerLevels[i] = m_players[i].level;
             }
+
+#if (DEBUG_BID_1)
+            // 如果在调试抢底
+            // 试试其他台上方和级数
+            m_dealer.playerLevels[1] = 6;
+            m_dealer.playerLevels[3] = 3;
+#endif
         }
 
         // 处理抢底流程
@@ -476,19 +491,19 @@ namespace server_0._0._1
                     // 根据现在的情况，更新该玩家的亮牌和手牌
                     if (isClickClub)
                     {
-                        m_dealer.BidHelper(i, m_handCardShowNumber, Card.Suit.Club);
+                        m_dealer.BidHelper(i,/* m_handCardShowNumber,*/ Card.Suit.Club);
                     }
                     else if (isClickDiamond)
                     {
-                        m_dealer.BidHelper(i, m_handCardShowNumber, Card.Suit.Diamond);
+                        m_dealer.BidHelper(i,/* m_handCardShowNumber,*/ Card.Suit.Diamond);
                     }
                     else if (isClickHeart)
                     {
-                        m_dealer.BidHelper(i, m_handCardShowNumber, Card.Suit.Heart);
+                        m_dealer.BidHelper(i,/* m_handCardShowNumber,*/ Card.Suit.Heart);
                     }
                     else if (isClickSpade)
                     {
-                        m_dealer.BidHelper(i, m_handCardShowNumber, Card.Suit.Spade);
+                        m_dealer.BidHelper(i,/* m_handCardShowNumber, */Card.Suit.Spade);
                     }
                     else// 如果玩家还没有决定亮牌
                     {
@@ -601,19 +616,19 @@ namespace server_0._0._1
                 // 根据现在的情况，更新该玩家的亮牌和手牌
                 if (isClickClub)
                 {
-                    m_dealer.BidHelper(i, m_handCardShowNumber, Card.Suit.Club);
+                    m_dealer.BidHelper(i, /*m_handCardShowNumber, */Card.Suit.Club);
                 }
                 else if (isClickDiamond)
                 {
-                    m_dealer.BidHelper(i, m_handCardShowNumber, Card.Suit.Diamond);
+                    m_dealer.BidHelper(i,/* m_handCardShowNumber,*/ Card.Suit.Diamond);
                 }
                 else if (isClickHeart)
                 {
-                    m_dealer.BidHelper(i, m_handCardShowNumber, Card.Suit.Heart);
+                    m_dealer.BidHelper(i,/* m_handCardShowNumber,*/ Card.Suit.Heart);
                 }
                 else if (isClickSpade)
                 {
-                    m_dealer.BidHelper(i, m_handCardShowNumber, Card.Suit.Spade);
+                    m_dealer.BidHelper(i, /*m_handCardShowNumber,*/ Card.Suit.Spade);
                 }
                 else// 如果玩家还没有决定亮牌
                 {
