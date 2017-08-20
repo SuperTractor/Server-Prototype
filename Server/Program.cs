@@ -1,6 +1,10 @@
 ﻿//#define DATABASE
 #undef DATABASE
 
+// 是否调试规则；不是调试规则，就是调试流程
+//#define RULE
+#undef RULE
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -76,23 +80,48 @@ namespace server_0._0._1
         static Stopwatch m_touchCardStopwatch;
         // 用于最后抢底阶段的计时器
         static Stopwatch m_lastBidStopwatch;
+#if (RULE)
         // 最后抢底阶段有的思考时间（毫秒）
         static int m_lastBidDelay = 5000;
-        //static int m_lastBidDelay = 500000;
-        // 抢底阶段：庄家埋底思考时间
-        //static int m_bidBuryBottomDelay = 30000;
+                // 抢底阶段：庄家埋底思考时间
         static int m_bidBuryBottomDelay = 3000000;
+                // 亮牌思考时间（毫秒）
+        static int m_showCardDelay = 1000000;
+               // 埋底思考时间（毫秒）
+        static int m_buryBottomDelay = 3000000;
+                // 寻友阶段庄家思考时间（毫秒）
+        static int m_findFriendDelay = 10000;
+        // 寻友结束后，如果庄家有找朋友，则停留几秒让所有玩家看清楚信号牌
+        static int m_findFriendLingerDelay = 2000;
+                // 4 个玩家都出牌后的延迟（毫秒）
+        static int m_clearPlayCardDelay = 1500;
+                // 玩家拥有的出牌思考时间(毫秒)
+        static int m_handOutTimeLimit = 100000000;
+#else
+        // 最后抢底阶段有的思考时间（毫秒）
+        static int m_lastBidDelay = 5000;
+        // 抢底阶段：庄家埋底思考时间
+        static int m_bidBuryBottomDelay = 30000;
+        // 亮牌思考时间（毫秒）
+        static int m_showCardDelay = 10000;
+        // 埋底思考时间（毫秒）
+        static int m_buryBottomDelay = 30000;
+        // 寻友阶段庄家思考时间（毫秒）
+        static int m_findFriendDelay = 10000;
+        // 寻友结束后，如果庄家有找朋友，则停留几秒让所有玩家看清楚信号牌
+        static int m_findFriendLingerDelay = 2000;
+        // 4 个玩家都出牌后的延迟（毫秒）
+        static int m_clearPlayCardDelay = 1500;
+        // 玩家拥有的出牌思考时间(毫秒)
+        static int m_handOutTimeLimit = 30000;
+#endif
+
         // 庄家埋底计时器
         static Stopwatch m_bidBuryStopwatch;
 
         // 炒底新增亮牌数组
         static Card[] m_addFryCards;
-        // 亮牌思考时间（毫秒）
-        //static int m_showCardDelay = 10000;
-        static int m_showCardDelay = 1000000;
-        // 埋底思考时间（毫秒）
-        //static int m_buryBottomDelay = 30000;
-        static int m_buryBottomDelay = 3000000;
+
         // 炒底阶段，玩家爱选择埋下的底牌
         static Card[] m_buryCards;
         // 炒底阶段，玩家是否跟牌
@@ -104,18 +133,13 @@ namespace server_0._0._1
 
         // 寻友阶段计时器
         static Stopwatch m_findFriendStopwatch;
-        // 寻友阶段庄家思考时间（毫秒）
-        //static int m_findFriendDelay = 10000;
-        static int m_findFriendDelay = 1000000;
-        // 寻友结束后，如果庄家有找朋友，则停留几秒让所有玩家看清楚信号牌
-        static int m_findFriendLingerDelay = 2000;
+
         // 停留计时器
         static Stopwatch m_findFriendLingerStopwatch;
 
         // 用于实现最后一个出牌后延迟清空牌桌的计时器
         static Stopwatch m_clearPlayCardStopwatch;
-        // 4 个玩家都出牌后的延迟（毫秒）
-        static int m_clearPlayCardDelay = 1500;
+
         // 标志已经完成一次延时
         static bool m_doneClearPlayCardDelay;
 
@@ -124,8 +148,7 @@ namespace server_0._0._1
 
         // 出牌计时器
         static Stopwatch m_handOutStopwatch;
-        // 玩家拥有的出牌思考时间(毫秒)
-        static int m_handOutTimeLimit = 100000000;
+
         // 上一次检查时的出牌玩家 id
         //static int m_lastCheckHandOutPlayerId;
         // 标志可以开始出牌思考计时
@@ -324,9 +347,13 @@ namespace server_0._0._1
             {
                 m_dealer.playerLevels[i] = m_players[i].level = 1;
             }
+
+            // 将玩家级数同步到客户端
+            ComServer.Broadcast(m_dealer.playerLevels);
+
             for (int i = 0; i < m_players.Count; i++)
             {
-                obj = ComServer.Respond(i,true);
+                obj = ComServer.Respond(i, true);
             }
         }
 
@@ -418,7 +445,7 @@ namespace server_0._0._1
                     {
                         // 检查客户端是否跟上步伐
                         //isFollowed &= (bool)ComServer.Respond(m_players[i].socket, "收到");
-                         obj= ComServer.Respond(i, "收到");
+                        obj = ComServer.Respond(i, "收到");
 
                         //isFollowed &= (bool)ComServer.Respond(i, "收到");
                         isFollowed &= (bool)obj;
@@ -427,7 +454,7 @@ namespace server_0._0._1
                     {
                         throw;
                     }
-                   
+
 
                     // 向该玩家发送当前可以亮牌的花色
                     //ComServer.Respond(m_players[i].socket, m_dealer.GetLegalBidColors(i/*,m_handCardShowNumber*/));
@@ -1464,11 +1491,18 @@ namespace server_0._0._1
                             // 进入下一轮出牌
                             m_dealer.circle++;
                             // 最后一轮
-                            if (m_dealer.AllPlayersHandEmpty())
-                                m_dealer.addLevel();
-                            else
-                                m_dealer.addScore();
+                            //if (m_dealer.AllPlayersHandEmpty())
+                            //    m_dealer.addLevel();
+                            //else
+                            m_dealer.addScore();
+                            // 将玩家分数更新到主线程
+                            for (int i = 0; i < m_dealer.score.Length; i++)
+                            {
+                                m_players[i].score = m_dealer.score[i];
+                            }
                         }
+                        // 将分数同步到客户端
+                        ComServer.Broadcast(m_dealer.score);
 
                         // 标志可以开始为下一玩家出牌思考计时
                         m_isOkCountDown = true;
@@ -1527,6 +1561,15 @@ namespace server_0._0._1
         // 处理计分流程
         static void Score()
         {
+            // 更新玩家的级数；更新台上方
+            m_dealer.addLevel();
+            for (int i = 0; i < m_dealer.playerLevels.Length; i++)
+            {
+                // 更新主线程中玩家的级数
+                m_players[i].level = m_dealer.playerLevels[i];
+            }
+            // 发送新级数到客户端
+            ComServer.Broadcast(m_dealer.playerLevels);
 
         }
 
@@ -1559,6 +1602,16 @@ namespace server_0._0._1
             // 将玩家信息统计之后更新到数据库服务器
             UpdatePlayerStats();
 #endif
+            // 这里同步一下客户端的战绩；直接把玩家信息发送到客户端
+            // 先发送玩家人数
+            ComServer.Broadcast(m_players.Count);
+            // 然后发送玩家信息
+            for (int i = 0; i < m_players.Count; i++)
+            {
+                ComServer.Broadcast(m_players[i]);
+            }
+
+
         }
 
         // 更新荷官需要掌握的信息
@@ -1857,7 +1910,7 @@ namespace server_0._0._1
                                 break;
                         }
                     }
-                    catch (Exception e)
+                    catch (Exception ex)
                     {
                         // 可能是断线了
                         // 向所有玩家发送紧急通告
@@ -1865,7 +1918,23 @@ namespace server_0._0._1
                         // 重新设置游戏为准备中状态
                         m_gameStateMachine.Update(GameStateMachine.State.GetReady);
 
-                        MyConsole.Log(e.Message);
+                        // Get stack trace for the exception with source file information
+                        var st = new StackTrace(ex, true);
+
+                        StackFrame[] frames = st.GetFrames();
+
+                        for (int i = 0; i < frames.Length; i++)
+                        {
+                            MyConsole.Log(frames[i].ToString());
+                        }
+
+                        MyConsole.Log(ex.Message);
+
+                        //// Get the line number from the stack frame
+                        //var line = frame.GetFileLineNumber();
+
+                        //MyConsole.Log(string.Format("{0}行 - {1}", line, ex.Message));
+
                     }
                     finally
                     {

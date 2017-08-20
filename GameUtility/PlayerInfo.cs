@@ -30,6 +30,29 @@ namespace GameUtility
         // 累计级数
         public int totalLevel { get; set; }
 
+        // 总抢底次数
+        public int totalBidTimes { get; set; }
+        // 总炒底次数
+        public int totalFryTimes { get; set; }
+        // 总埋底分数
+        public int totalBuryScores { get; set; }
+        // 游戏总局数
+        public int totalRoundTimes { get; set; }
+        // 总单打次数
+        public int totalSingleTimes { get; set; }
+        // 总做庄次数
+        public int totalBankerTimes { get; set; }
+        // 总抄底成功数
+        public int totalBottomSuccessTimes { get; set; }
+        // 总抄底分数
+        public int totalBottomScores { get; set; }
+        // 最高抄底分数
+        public int highBottomScores { get; set; }
+        // 总逃跑次数
+        public int totalRunTimes { get; set; }
+
+
+
 
         public PlayerInfo(string name)
         {
