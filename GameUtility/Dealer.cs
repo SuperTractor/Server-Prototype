@@ -1061,10 +1061,6 @@ namespace GameUtility
         {
             get { return m_playerCard; }
         }
-        // 出牌要求牌数
-        public int dealRequiredLength { get; set; }
-        // 当前首家 ID，即第一个出牌玩家 ID
-        public int firstHomePlayerId { get; set; }
 
         // 玩家总数
         public const int playerNumber = 4;
@@ -1134,6 +1130,74 @@ namespace GameUtility
             }
             bankerPlayerId = new List<int>();
         }
+
+
+        // 从指定玩家 ID 开始，逆序找上一个台上方玩家
+        int GetLastUpperPlayerId(int id)
+        {
+            for (int i = 1; i < 4; i++)
+            {
+                int thisId = (playerNumber + id - i) % playerNumber;
+                // 如果找到了上一个台上方玩家
+                if (Array.IndexOf(m_upperPlayersId, thisId) >= 0)
+                {
+                    return thisId;
+                }
+            }
+            throw new Exception("找不到上一个台上方玩家");
+        }
+
+        /// <summary>
+        /// 从指定玩家 ID 开始，逆序找上一个指定级数的台上方玩家，
+        /// </summary>
+        /// <param name="id">开始 ID </param>
+        /// <param name="level">指定级数</param>
+        /// <returns></returns>
+        int GetLastUpperPlayerId(int id, int level)
+        {
+            for (int i = 1; i < 4; i++)
+            {
+                int thisId = (playerNumber + id - i) % playerNumber;
+                // 如果找到了上一个指定级数的台上方玩家
+                if (IsUpperPlayer(thisId) && playerLevels[thisId] == level)
+                {
+                    return thisId;
+                }
+            }
+            throw new Exception("找不到上一个指定级数的台上方玩家");
+        }
+
+        /// <summary>
+        /// 检查某玩家是否为台上方玩家
+        /// </summary>
+        /// <param name="id">要检查的玩家 ID</param>
+        /// <returns></returns>
+        public bool IsUpperPlayer(int id)
+        {
+            return Array.IndexOf(m_upperPlayersId, id) >= 0;
+        }
+
+        /// <summary>
+        /// 检查某个玩家是否为庄家
+        /// </summary>
+        /// <param name="id">要检查的玩家 ID</param>
+        /// <returns></returns>
+        public bool IsBanker(int id)
+        {
+            return bankerPlayerId.IndexOf(id) >= 0;
+        }
+        /// <summary>
+        /// 保证新增庄家的时候，不会重复添加
+        /// </summary>
+        /// <param name="id"></param>
+        public void AddBanker(int id)
+        {
+            if (!IsBanker(id))
+            {
+                bankerPlayerId.Add(id);
+            }
+        }
+
         #endregion
 
         #region DEAL
@@ -1159,6 +1223,32 @@ namespace GameUtility
             Array.Copy(m_totalCard, m_bottom, bottomCardNumber);
         }
 
+        // 发牌结束，更新主牌信息
+        public void UpdateMainDeal()
+        {
+#if (DEAL)
+            // 如果是首盘
+            if (round == 1)
+            {
+                mainNumber = 12;
+                return;
+            }
+            // 如果台上方只有一个，更新主级数
+            if (m_upperPlayersId.Length == 1)
+            {
+                // 用他的级数更新（必须保证玩家级数数组已经更新）
+                mainNumber = (playerLevels[m_upperPlayersId[0]] + 11) % 13;
+            }
+            // 否则不更新，留到后面解决
+            else
+            {
+
+            }
+#else
+
+#endif
+        }
+
         #endregion
 
         // 抢底部分代码
@@ -1178,10 +1268,14 @@ namespace GameUtility
         public bool hasBidder { get; set; }
         // 记录 4 个玩家率先亮牌的顺序；bidOrder[0]=1 表示第一个亮牌的是玩家 id = 1
         public int[] bidOrder = new int[playerNumber];
+        // 测试：抢底亮牌上限
+        int m_bidCardsLimit = 5;
+
 
         // 抢底阶段：给出此玩家当前可以亮的花色，已知当前摸牌的数目
         public bool[] GetLegalBidColors(int playerId/*, int touchCardNumber*/)
         {
+#if (BID)
             bool[] legalBidColors = new bool[4];
             // 构造当前该玩家已经摸到的牌
             //Card[] currentTouchCards = new Card[touchCardNumber];
@@ -1266,7 +1360,7 @@ namespace GameUtility
 
                         // 计算这花色的摸牌，加上已经亮的牌，总共多少张
                         // 只有当总数至少为要求数目，才可以出这个花色的牌
-                        int totalNum = levelCards.Count(card => card.suit == (Card.Suit)i) + currentBidCards[playerId].Count;
+                        int totalNum = levelCards.Count(card => card.suit == (Card.Suit)i);
                         legalBidColors[i] = totalNum >= bidNeedNumber;
                     }
                 }
@@ -1275,6 +1369,36 @@ namespace GameUtility
             {
             }
             return legalBidColors;
+#else
+            // 测试：只要比最大亮牌数多就行
+            int bidNeedNumber;
+
+            // 看看现在最大亮牌数是多少
+            int maxBidNumber = currentBidCards.Max(cards => cards.Count);
+
+            // 先亮主牌抢底者可以在同花色情况下逐张增加主牌张数保抢底权
+            bidNeedNumber = maxBidNumber + 1 - currentBidCards[playerId].Count;
+
+            // 测试：都可以亮
+            bool[] legalBidColors = new bool[4];
+
+            // 如果要亮牌数已经达到亮牌上限；或者玩家根本不够手牌
+            if (maxBidNumber + 1 > m_bidCardsLimit|| playersHandCard[playerId].Count< bidNeedNumber)
+            {
+                // 不可以亮了
+                return legalBidColors;
+            }
+            else
+            {
+                // 都可以亮
+                for (int i = 0; i < legalBidColors.Length; i++)
+                {
+                    legalBidColors[i] = true;
+                }
+                return legalBidColors;
+            }
+            
+#endif
         }
         // 亮牌需要增加的数目
         //public int BidNeedNumber(int playerId)
@@ -1284,6 +1408,7 @@ namespace GameUtility
         // 抢底阶段：亮牌帮助函数
         public void BidHelper(int playerId/*, int currentTouchNumber*/, Card.Suit suit)
         {
+#if (BID)
             int bidNeedNumber;
             // 检查当前亮牌玩家是否已经亮过牌
             if (currentBidCards[playerId].Count > 0)
@@ -1304,7 +1429,7 @@ namespace GameUtility
             // 如果现在最大亮牌数是 0 ，说明还没有人亮牌
             if (maxBidNumber == 0)
             {
-                 bidNeedNumber = 1;
+                bidNeedNumber = 1;
 
             }
             // 否则，就说明之前已经有人亮牌
@@ -1348,6 +1473,30 @@ namespace GameUtility
             gotBottomPlayerId = playerId;
             // 有人抢底了
             hasBidder = true;
+#else
+            // 测试：只要比最大亮牌数多就行
+            int bidNeedNumber;
+
+            // 看看现在最大亮牌数是多少
+            int maxBidNumber = currentBidCards.Max(cards => cards.Count);
+
+            // 先亮主牌抢底者可以在同花色情况下逐张增加主牌张数保抢底权
+            bidNeedNumber = maxBidNumber + 1 - currentBidCards[playerId].Count;
+
+            // 从手牌中拿出要求数量的牌
+            List<Card> temp = new List<Card>();
+            for(int i = 0; i < bidNeedNumber; i++)
+            {
+                temp.Add(playersHandCard[playerId][0]);
+                playersHandCard[playerId].RemoveAt(0);
+            }
+            currentBidCards[playerId].AddRange(temp);
+
+            // 更新当前抢到底牌的玩家 ID
+            gotBottomPlayerId = playerId;
+            // 有人抢底了
+            hasBidder = true;
+#endif
         }
 
 
@@ -1365,6 +1514,51 @@ namespace GameUtility
             }
             // 当没有更高筹码，或者只有一个台上方玩家时，认为不需要再进行抢底
             return !hasHigerBid || upperPlayersId.Length == 1;
+        }
+
+        /// <summary>
+        /// 抢底阶段结束后，更新庄家
+        /// </summary>
+        public void UpdateBankerBid()
+        {
+            // 清空庄家列表
+            bankerPlayerId.Clear();
+            // 抢到底牌的为庄家
+            bankerPlayerId.Add(gotBottomPlayerId);
+        }
+
+        // 抢底阶段结束，更新主牌信息
+        public void UpdateMainBid()
+        {
+#if (BID)
+            // 暂且认为抢到底牌的玩家是庄家，这时候已经更新庄家了
+            // 庄家的亮牌可以确定主级数和主花色
+            mainNumber = (playerLevels[bankerPlayerId[0]] + 11) % 13;
+            switch (gotBottomSuit)
+            {
+                case Card.Suit.Club:
+                    mainColor = 2;
+                    break;
+                case Card.Suit.Diamond:
+                    mainColor = 0;
+                    break;
+                case Card.Suit.Heart:
+                    mainColor = 3;
+                    break;
+                case Card.Suit.Spade:
+                    mainColor = 1;
+                    break;
+                // 抢底不可能有大小鬼亮牌
+                //case Card.Suit.Joker0:
+                //    break;
+                //case Card.Suit.Joker1:
+                //    break;
+                default:
+                    break;
+            }
+#else
+
+#endif
         }
 
         #endregion
@@ -1789,6 +1983,310 @@ namespace GameUtility
 #endif
         }
 
+        /// <summary>
+        /// 专门处理最后亮牌的是台下方，亮的还是大小鬼的情形
+        /// 尽可能确定台上方高级玩家为庄家
+        /// </summary>
+        /// <param name="id">亮牌玩家的 ID</param>
+        /// <returns></returns>
+        void UpdateBankerFry(int id)
+        {
+#if (FRY)
+            // 如果台上方玩家只有 1 个
+            if (m_upperPlayersId.Length == 1)
+            {
+                // 那庄家肯定非他莫属了
+                // 如果他还不是庄家
+                //AddBanker(m_upperPlayersId[0]);
+                bankerPlayerId[0] = m_upperPlayersId[0];
+            }
+            // 否则，如果有多个台上方玩家
+            else
+            {
+                // 找到上一家能够用来确定庄家的亮牌
+                // 先从有当前亮牌的玩家里面逆序找，如果找到台上方，或者是没出大小鬼的台下方，则返回他的亮牌
+                // 如果上面找不到，再从有历史亮牌的里面找，如果找到台上方，或者是没出大小鬼的台下方，则返回他的亮牌
+                // 如果上面都找不到，那我只能定抢到底牌的玩家为庄家了；也就是不更新庄家了（注意没人抢底的话，直接重新发牌）
+                for (int i = 1; i < playerNumber; i++)
+                {
+                    int thisId = (playerNumber + id - i) % playerNumber;
+                    // 如果当前亮牌里面有
+                    if (showCards[thisId].Count > 0)
+                    {
+                        // 获得他的亮牌
+                        Card thisCard = showCards[thisId][0];
+                        // 如果他是台上方
+                        if (IsUpperPlayer(thisId))
+                        {
+                            // 如果他亮的是大小鬼，或者是他自己的级数
+                            if (thisCard.points == 13 || thisCard.points + 1 == playerLevels[thisId])
+                            {
+                                bankerPlayerId[0] = thisId;
+                            }
+                            // 亮的是其他级数
+                            else
+                            {
+                                // 找到上一个是亮牌点数的台上方
+                                int lastUpperPlayerId = GetLastUpperPlayerId(thisId, thisCard.points + 1);
+                                // 他做庄
+                                bankerPlayerId[0] = lastUpperPlayerId;
+                            }
+                        }
+                        // 如果他是台下方
+                        else
+                        {
+                            // 如果这人亮了大小鬼
+                            if (thisCard.points == 13)
+                            {
+                                // 跳过
+                            }
+                            // 否则
+                            else
+                            {
+                                // 找到上一个是亮牌点数的台上方
+                                int lastUpperPlayerId = GetLastUpperPlayerId(thisId, thisCard.points + 1);
+                                // 他做庄
+                                bankerPlayerId[0] = lastUpperPlayerId;
+                            }
+                        }
+                    }
+                }
+                for (int i = 1; i < playerNumber; i++)
+                {
+                    int thisId = (playerNumber + id - i) % playerNumber;
+                    // 如果历史亮牌里面有
+                    if (showCardsHistory[thisId].Count > 0)
+                    {
+                        // 获得他的亮牌
+                        Card thisCard = showCardsHistory[thisId][0];
+                        // 如果他是台上方
+                        if (IsUpperPlayer(thisId))
+                        {
+                            // 如果他亮的是大小鬼，或者是他自己的级数
+                            if (thisCard.points == 13 || thisCard.points + 1 == playerLevels[thisId])
+                            {
+                                bankerPlayerId[0] = thisId;
+                            }
+                            // 亮的是其他级数
+                            else
+                            {
+                                // 找到上一个是亮牌点数的台上方
+                                int lastUpperPlayerId = GetLastUpperPlayerId(thisId, thisCard.points + 1);
+                                // 他做庄
+                                bankerPlayerId[0] = lastUpperPlayerId;
+                            }
+                        }
+                        // 如果他是台下方
+                        else
+                        {
+                            // 如果这人亮了大小鬼
+                            if (thisCard.points == 13)
+                            {
+                                // 跳过
+                            }
+                            // 否则
+                            else
+                            {
+                                // 找到上一个是亮牌点数的台上方
+                                int lastUpperPlayerId = GetLastUpperPlayerId(thisId, thisCard.points + 1);
+                                // 他做庄
+                                bankerPlayerId[0] = lastUpperPlayerId;
+                            }
+                        }
+                    }
+                }
+            }
+#else
+
+#endif
+        }
+
+        /// <summary>
+        /// 炒底阶段结束后，更新庄家
+        /// </summary>
+        public void UpdateBankerFry()
+        {
+#if (FRY)
+            // 如果这是首盘
+            if (round == 1)
+            {
+                // 抢到底牌的是庄家，这有UpdateBankerBid来handle
+            }
+            // 如果这不是首盘
+            else
+            {
+                // 如果没有人炒底
+                if (lastFryShowPlayerId < 0)
+                {
+                    // 跳过
+                }
+                // 如果有人炒底
+                else
+                {
+                    // 检查最后炒底亮牌的玩家是不是台上方
+                    bool isUpperPlayer = IsUpperPlayer(lastFryShowPlayerId);
+                    // 如果是台上方
+                    if (isUpperPlayer)
+                    {
+                        // 如果亮出大王、小王或自己台上级主牌
+                        if (lastFryShowCard.points == 13 || lastFryShowCard.points + 1 == playerLevels[lastFryShowPlayerId])
+                        {
+                            // 自己做庄
+                            bankerPlayerId[0] = lastFryShowPlayerId;
+                        }
+                        else
+                        {
+                            // 找到上一个是亮牌点数的台上方
+                            int lastUpperPlayerId = GetLastUpperPlayerId(lastFryShowPlayerId, lastFryShowCard.points + 1);
+                            // 他做庄
+                            bankerPlayerId[0] = lastUpperPlayerId;
+                        }
+                    }
+                    // 如果不是台上方
+                    else
+                    {
+                        // 如果这人亮了大小鬼
+                        if (lastFryShowCard.points == 13)
+                        {
+                            // 用专门的函数处理
+                            UpdateBankerFry(lastFryShowPlayerId);
+                        }
+                        // 否则
+                        else
+                        {
+                            // 找到上一个是亮牌点数的台上方
+                            int lastUpperPlayerId = GetLastUpperPlayerId(lastFryShowPlayerId, lastFryShowCard.points + 1);
+                            // 他做庄
+                            bankerPlayerId[0] = lastUpperPlayerId;
+                        }
+                    }
+                }
+            }
+
+#else
+
+#endif
+        }
+
+        // 炒底阶段结束，更新主牌信息
+        public void UpdateMainFry()
+        {
+#if (FRY)
+            // 如果有人炒底
+            if (lastFryShowPlayerId >= 0)
+            {
+                // 如果这是首盘
+                if (round == 1)
+                {
+                    // 大家肯定是 1 级
+                    mainNumber = 12;
+                    switch (lastFryShowCard.suit)
+                    {
+                        case Card.Suit.Club:
+                            mainColor = 2;
+                            break;
+                        case Card.Suit.Diamond:
+                            mainColor = 0;
+                            break;
+                        case Card.Suit.Heart:
+                            mainColor = 3;
+                            break;
+                        case Card.Suit.Spade:
+                            mainColor = 1;
+                            break;
+                        // 无将
+                        case Card.Suit.Joker0:
+                        case Card.Suit.Joker1:
+                            mainColor = 4;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                // 如果这不是首盘
+                else
+                {
+                    // 如果最后亮牌的是台上方
+                    if (Array.IndexOf(m_upperPlayersId, lastFryShowPlayerId) >= 0)
+                    {
+                        // 最终亮主牌最大一家是台上方，这门主级牌和相应的花色牌就是主牌
+                        mainNumber = (lastFryShowCard.points + 1 + 11) % 13;
+                        switch (lastFryShowCard.suit)
+                        {
+                            case Card.Suit.Club:
+                                mainColor = 2;
+                                break;
+                            case Card.Suit.Diamond:
+                                mainColor = 0;
+                                break;
+                            case Card.Suit.Heart:
+                                mainColor = 3;
+                                break;
+                            case Card.Suit.Spade:
+                                mainColor = 1;
+                                break;
+                            // 无将
+                            // 最终亮主牌最大一家是台上方亮出大王或小王，则是台上方主级牌的无将是主牌
+                            case Card.Suit.Joker0:
+                            case Card.Suit.Joker1:
+                                mainNumber = (playerLevels[lastFryShowPlayerId] + 11) % 13;
+                                mainColor = 4;
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                    // 如果最后亮牌的不是台上方
+                    else
+                    {
+                        // 最终亮主牌最大一家是台下方，这门主级牌和相应的花色牌就是主牌
+                        mainNumber = (lastFryShowCard.points + 1 + 11) % 13;
+                        int lastUpperPlayerId;
+                        switch (lastFryShowCard.suit)
+                        {
+                            case Card.Suit.Club:
+                                mainColor = 2;
+                                break;
+                            case Card.Suit.Diamond:
+                                mainColor = 0;
+                                break;
+                            case Card.Suit.Heart:
+                                mainColor = 3;
+                                break;
+                            case Card.Suit.Spade:
+                                mainColor = 1;
+                                break;
+                            // 无将
+                            case Card.Suit.Joker0:
+                            case Card.Suit.Joker1:
+                                // 逆序找到最近的台上方玩家
+                                lastUpperPlayerId = GetLastUpperPlayerId(lastFryShowPlayerId);
+                                Card lastUpperPlayerShowCard = showCards[lastUpperPlayerId][0];
+                                // 如果这台上方也出的大小鬼
+                                if (lastUpperPlayerShowCard.suit == Card.Suit.Joker0 || lastUpperPlayerShowCard.suit == Card.Suit.Joker0)
+                                {
+                                    // 这台上方的级数为主级数
+                                    mainNumber = (playerLevels[lastUpperPlayerId] + 11) % 13;
+                                }
+                                // 如果这台上方出的不是大小鬼
+                                else
+                                {
+                                    // 他出的牌的级数是主级数
+                                    mainNumber = (lastUpperPlayerShowCard.points + 1 + 11) % 13;
+                                }
+                                mainColor = 4;
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+            }
+#else
+
+#endif
+        }
+
         #endregion
 
         #region FINDFRIEND
@@ -1865,6 +2363,10 @@ namespace GameUtility
             set { m_round = value; }
         }
 
+        // 出牌要求牌数
+        public int dealRequiredLength { get; set; }
+        // 当前首家 ID，即第一个出牌玩家 ID
+        public int firstHomePlayerId { get; set; }
 
         // Player到RulePlayer的转换
         RulePlayer[] PlayerToRulePlayer(PlayerInfo[] res)
@@ -3845,6 +4347,67 @@ namespace GameUtility
             }
 #endif
         }
+        public void SetCurrentPlayerId(int id)
+        {
+            m_currentPlayerId = id;
+        }
+
+        public void ClearHandOutCards()
+        {
+            for (int i = 0; i < playerNumber; i++)
+            {
+                handOutCards[i].Clear();
+            }
+        }
+
+        // TODO：
+        //public void IncrementCurrentPlayerId()
+        //{
+        //    m_currentPlayerId = (m_currentPlayerId + 1) % playerNumber;
+        //}
+        public void UpdateNextPlayer()
+        {
+            // 如果所有玩家都出过牌
+            if (handOutPlayerCount == 0)
+            {
+                // 设置下一出牌玩家为首家
+                m_currentPlayerId = firstHomePlayerId;
+            }
+            else// 如果还有玩家没有出牌
+            {
+                // 下一玩家出牌
+                m_currentPlayerId = (m_currentPlayerId + 1) % playerNumber;
+            }
+        }
+
+        // 对战阶段更新庄家；出了信号牌的人为庄家
+        public void UpdateBankerFight(Card[] dealCards)
+        {
+            // 如果庄家不选择单打，并且现在只有 1 个庄家
+            if (!bankerIsFightAlone && bankerPlayerId.Count < 2)
+            {
+                int idx = Array.FindIndex(dealCards, card => card == signCard);
+                // 如果找得到信号牌
+                if (idx >= 0)
+                {
+                    // 确保不重复设置庄家
+                    if (m_currentPlayerId != bankerPlayerId[0])
+                    {
+                        // 把当前出牌玩家记为庄家
+                        //bankerPlayerId.Add(m_currentPlayerId);
+                        AddBanker(m_currentPlayerId);
+                    }
+                    // 如果庄家自己出了信号牌
+                    else
+                    {
+                        // 那就是单打了
+                        bankerIsFightAlone = true;
+                    }
+                    // 将信号牌清除，因为信号牌用一次就没有了
+                    signCard = null;
+                }
+            }
+        }
 
         #endregion
 
@@ -4016,513 +4579,6 @@ namespace GameUtility
         }
         #endregion
 
-        public void SetCurrentPlayerId(int id)
-        {
-            m_currentPlayerId = id;
-        }
-
-        public void ClearHandOutCards()
-        {
-            for (int i = 0; i < playerNumber; i++)
-            {
-                handOutCards[i].Clear();
-            }
-        }
-
-        // TODO：
-        //public void IncrementCurrentPlayerId()
-        //{
-        //    m_currentPlayerId = (m_currentPlayerId + 1) % playerNumber;
-        //}
-        public void UpdateNextPlayer()
-        {
-            // 如果所有玩家都出过牌
-            if (handOutPlayerCount == 0)
-            {
-                // 设置下一出牌玩家为首家
-                m_currentPlayerId = firstHomePlayerId;
-            }
-            else// 如果还有玩家没有出牌
-            {
-                // 下一玩家出牌
-                m_currentPlayerId = (m_currentPlayerId + 1) % playerNumber;
-            }
-        }
-
-        #region UPDATE_BANKER
-
-        // 从指定玩家 ID 开始，逆序找上一个台上方玩家
-        int GetLastUpperPlayerId(int id)
-        {
-            for (int i = 1; i < 4; i++)
-            {
-                int thisId = (playerNumber + id - i) % playerNumber;
-                // 如果找到了上一个台上方玩家
-                if (Array.IndexOf(m_upperPlayersId, thisId) >= 0)
-                {
-                    return thisId;
-                }
-            }
-            throw new Exception("找不到上一个台上方玩家");
-        }
-
-        /// <summary>
-        /// 从指定玩家 ID 开始，逆序找上一个指定级数的台上方玩家，
-        /// </summary>
-        /// <param name="id">开始 ID </param>
-        /// <param name="level">指定级数</param>
-        /// <returns></returns>
-        int GetLastUpperPlayerId(int id, int level)
-        {
-            for (int i = 1; i < 4; i++)
-            {
-                int thisId = (playerNumber + id - i) % playerNumber;
-                // 如果找到了上一个指定级数的台上方玩家
-                if (IsUpperPlayer(thisId) && playerLevels[thisId] == level)
-                {
-                    return thisId;
-                }
-            }
-            throw new Exception("找不到上一个指定级数的台上方玩家");
-        }
-
-        /// <summary>
-        /// 抢底阶段结束后，更新庄家
-        /// </summary>
-        public void UpdateBankerBid()
-        {
-            // 清空庄家列表
-            bankerPlayerId.Clear();
-            // 抢到底牌的为庄家
-            bankerPlayerId.Add(gotBottomPlayerId);
-        }
-        /// <summary>
-        /// 检查某玩家是否为台上方玩家
-        /// </summary>
-        /// <param name="id">要检查的玩家 ID</param>
-        /// <returns></returns>
-        public bool IsUpperPlayer(int id)
-        {
-            return Array.IndexOf(m_upperPlayersId, id) >= 0;
-        }
-
-        /// <summary>
-        /// 检查某个玩家是否为庄家
-        /// </summary>
-        /// <param name="id">要检查的玩家 ID</param>
-        /// <returns></returns>
-        public bool IsBanker(int id)
-        {
-            return bankerPlayerId.IndexOf(id) >= 0;
-        }
-        /// <summary>
-        /// 保证新增庄家的时候，不会重复添加
-        /// </summary>
-        /// <param name="id"></param>
-        public void AddBanker(int id)
-        {
-            if (!IsBanker(id))
-            {
-                bankerPlayerId.Add(id);
-            }
-        }
-
-        /// <summary>
-        /// 专门处理最后亮牌的是台下方，亮的还是大小鬼的情形
-        /// 尽可能确定台上方高级玩家为庄家
-        /// </summary>
-        /// <param name="id">亮牌玩家的 ID</param>
-        /// <returns></returns>
-        void UpdateBankerFry(int id)
-        {
-#if (FRY)
-            // 如果台上方玩家只有 1 个
-            if (m_upperPlayersId.Length == 1)
-            {
-                // 那庄家肯定非他莫属了
-                // 如果他还不是庄家
-                //AddBanker(m_upperPlayersId[0]);
-                bankerPlayerId[0] = m_upperPlayersId[0];
-            }
-            // 否则，如果有多个台上方玩家
-            else
-            {
-                // 找到上一家能够用来确定庄家的亮牌
-                // 先从有当前亮牌的玩家里面逆序找，如果找到台上方，或者是没出大小鬼的台下方，则返回他的亮牌
-                // 如果上面找不到，再从有历史亮牌的里面找，如果找到台上方，或者是没出大小鬼的台下方，则返回他的亮牌
-                // 如果上面都找不到，那我只能定抢到底牌的玩家为庄家了；也就是不更新庄家了（注意没人抢底的话，直接重新发牌）
-                for (int i = 1; i < playerNumber; i++)
-                {
-                    int thisId = (playerNumber + id - i) % playerNumber;
-                    // 如果当前亮牌里面有
-                    if (showCards[thisId].Count > 0)
-                    {
-                        // 获得他的亮牌
-                        Card thisCard = showCards[thisId][0];
-                        // 如果他是台上方
-                        if (IsUpperPlayer(thisId))
-                        {
-                            // 如果他亮的是大小鬼，或者是他自己的级数
-                            if (thisCard.points == 13 || thisCard.points + 1 == playerLevels[thisId])
-                            {
-                                bankerPlayerId[0] = thisId;
-                            }
-                            // 亮的是其他级数
-                            else
-                            {
-                                // 找到上一个是亮牌点数的台上方
-                                int lastUpperPlayerId = GetLastUpperPlayerId(thisId, thisCard.points + 1);
-                                // 他做庄
-                                bankerPlayerId[0] = lastUpperPlayerId;
-                            }
-                        }
-                        // 如果他是台下方
-                        else
-                        {
-                            // 如果这人亮了大小鬼
-                            if (thisCard.points == 13)
-                            {
-                                // 跳过
-                            }
-                            // 否则
-                            else
-                            {
-                                // 找到上一个是亮牌点数的台上方
-                                int lastUpperPlayerId = GetLastUpperPlayerId(thisId, thisCard.points + 1);
-                                // 他做庄
-                                bankerPlayerId[0] = lastUpperPlayerId;
-                            }
-                        }
-                    }
-                }
-                for (int i = 1; i < playerNumber; i++)
-                {
-                    int thisId = (playerNumber + id - i) % playerNumber;
-                    // 如果历史亮牌里面有
-                    if (showCardsHistory[thisId].Count > 0)
-                    {
-                        // 获得他的亮牌
-                        Card thisCard = showCardsHistory[thisId][0];
-                        // 如果他是台上方
-                        if (IsUpperPlayer(thisId))
-                        {
-                            // 如果他亮的是大小鬼，或者是他自己的级数
-                            if (thisCard.points == 13 || thisCard.points + 1 == playerLevels[thisId])
-                            {
-                                bankerPlayerId[0] = thisId;
-                            }
-                            // 亮的是其他级数
-                            else
-                            {
-                                // 找到上一个是亮牌点数的台上方
-                                int lastUpperPlayerId = GetLastUpperPlayerId(thisId, thisCard.points + 1);
-                                // 他做庄
-                                bankerPlayerId[0] = lastUpperPlayerId;
-                            }
-                        }
-                        // 如果他是台下方
-                        else
-                        {
-                            // 如果这人亮了大小鬼
-                            if (thisCard.points == 13)
-                            {
-                                // 跳过
-                            }
-                            // 否则
-                            else
-                            {
-                                // 找到上一个是亮牌点数的台上方
-                                int lastUpperPlayerId = GetLastUpperPlayerId(thisId, thisCard.points + 1);
-                                // 他做庄
-                                bankerPlayerId[0] = lastUpperPlayerId;
-                            }
-                        }
-                    }
-                }
-            }
-#else
-
-#endif
-        }
-
-        /// <summary>
-        /// 炒底阶段结束后，更新庄家
-        /// </summary>
-        public void UpdateBankerFry()
-        {
-#if (FRY)
-            // 如果这是首盘
-            if (round == 1)
-            {
-                // 抢到底牌的是庄家，这有UpdateBankerBid来handle
-            }
-            // 如果这不是首盘
-            else
-            {
-                // 如果没有人炒底
-                if (lastFryShowPlayerId < 0)
-                {
-                    // 跳过
-                }
-                // 如果有人炒底
-                else
-                {
-                    // 检查最后炒底亮牌的玩家是不是台上方
-                    bool isUpperPlayer = IsUpperPlayer(lastFryShowPlayerId);
-                    // 如果是台上方
-                    if (isUpperPlayer)
-                    {
-                        // 如果亮出大王、小王或自己台上级主牌
-                        if (lastFryShowCard.points == 13 || lastFryShowCard.points + 1 == playerLevels[lastFryShowPlayerId])
-                        {
-                            // 自己做庄
-                            bankerPlayerId[0] = lastFryShowPlayerId;
-                        }
-                        else
-                        {
-                            // 找到上一个是亮牌点数的台上方
-                            int lastUpperPlayerId = GetLastUpperPlayerId(lastFryShowPlayerId, lastFryShowCard.points + 1);
-                            // 他做庄
-                            bankerPlayerId[0] = lastUpperPlayerId;
-                        }
-                    }
-                    // 如果不是台上方
-                    else
-                    {
-                        // 如果这人亮了大小鬼
-                        if (lastFryShowCard.points == 13)
-                        {
-                            // 用专门的函数处理
-                            UpdateBankerFry(lastFryShowPlayerId);
-                        }
-                        // 否则
-                        else
-                        {
-                            // 找到上一个是亮牌点数的台上方
-                            int lastUpperPlayerId = GetLastUpperPlayerId(lastFryShowPlayerId, lastFryShowCard.points + 1);
-                            // 他做庄
-                            bankerPlayerId[0] = lastUpperPlayerId;
-                        }
-                    }
-                }
-            }
-
-#else
-
-#endif
-        }
-
-        // 对战阶段更新庄家；出了信号牌的人为庄家
-        public void UpdateBankerFight(Card[] dealCards)
-        {
-            // 如果庄家不选择单打，并且现在只有 1 个庄家
-            if (!bankerIsFightAlone && bankerPlayerId.Count < 2)
-            {
-                int idx = Array.FindIndex(dealCards, card => card == signCard);
-                // 如果找得到信号牌
-                if (idx >= 0)
-                {
-                    // 确保不重复设置庄家
-                    if (m_currentPlayerId != bankerPlayerId[0])
-                    {
-                        // 把当前出牌玩家记为庄家
-                        //bankerPlayerId.Add(m_currentPlayerId);
-                        AddBanker(m_currentPlayerId);
-                    }
-                    // 如果庄家自己出了信号牌
-                    else
-                    {
-                        // 那就是单打了
-                        bankerIsFightAlone = true;
-                    }
-                    // 将信号牌清除，因为信号牌用一次就没有了
-                    signCard = null;
-                }
-            }
-        }
-
-        #endregion
-
-        #region UPDATE_MAIN
-        // 发牌结束，更新主牌信息
-        public void UpdateMainDeal()
-        {
-#if (DEAL)
-            // 如果是首盘
-            if (round == 1)
-            {
-                mainNumber = 12;
-                return;
-            }
-            // 如果台上方只有一个，更新主级数
-            if (m_upperPlayersId.Length == 1)
-            {
-                // 用他的级数更新（必须保证玩家级数数组已经更新）
-                mainNumber = (playerLevels[m_upperPlayersId[0]] + 11) % 13;
-            }
-            // 否则不更新，留到后面解决
-            else
-            {
-
-            }
-#else
-
-#endif
-        }
-
-        // 抢底阶段结束，更新主牌信息
-        public void UpdateMainBid()
-        {
-#if (BID)
-            // 暂且认为抢到底牌的玩家是庄家，这时候已经更新庄家了
-            // 庄家的亮牌可以确定主级数和主花色
-            mainNumber = (playerLevels[bankerPlayerId[0]] + 11) % 13;
-            switch (gotBottomSuit)
-            {
-                case Card.Suit.Club:
-                    mainColor = 2;
-                    break;
-                case Card.Suit.Diamond:
-                    mainColor = 0;
-                    break;
-                case Card.Suit.Heart:
-                    mainColor = 3;
-                    break;
-                case Card.Suit.Spade:
-                    mainColor = 1;
-                    break;
-                // 抢底不可能有大小鬼亮牌
-                //case Card.Suit.Joker0:
-                //    break;
-                //case Card.Suit.Joker1:
-                //    break;
-                default:
-                    break;
-            }
-#else
-
-#endif
-        }
-
-        // 炒底阶段结束，更新主牌信息
-        public void UpdateMainFry()
-        {
-#if (FRY)
-            // 如果有人炒底
-            if (lastFryShowPlayerId >= 0)
-            {
-                // 如果这是首盘
-                if (round == 1)
-                {
-                    // 大家肯定是 1 级
-                    mainNumber = 12;
-                    switch (lastFryShowCard.suit)
-                    {
-                        case Card.Suit.Club:
-                            mainColor = 2;
-                            break;
-                        case Card.Suit.Diamond:
-                            mainColor = 0;
-                            break;
-                        case Card.Suit.Heart:
-                            mainColor = 3;
-                            break;
-                        case Card.Suit.Spade:
-                            mainColor = 1;
-                            break;
-                        // 无将
-                        case Card.Suit.Joker0:
-                        case Card.Suit.Joker1:
-                            mainColor = 4;
-                            break;
-                        default:
-                            break;
-                    }
-                }
-                // 如果这不是首盘
-                else
-                {
-                    // 如果最后亮牌的是台上方
-                    if (Array.IndexOf(m_upperPlayersId, lastFryShowPlayerId) >= 0)
-                    {
-                        // 最终亮主牌最大一家是台上方，这门主级牌和相应的花色牌就是主牌
-                        mainNumber = (lastFryShowCard.points + 1 + 11) % 13;
-                        switch (lastFryShowCard.suit)
-                        {
-                            case Card.Suit.Club:
-                                mainColor = 2;
-                                break;
-                            case Card.Suit.Diamond:
-                                mainColor = 0;
-                                break;
-                            case Card.Suit.Heart:
-                                mainColor = 3;
-                                break;
-                            case Card.Suit.Spade:
-                                mainColor = 1;
-                                break;
-                            // 无将
-                            // 最终亮主牌最大一家是台上方亮出大王或小王，则是台上方主级牌的无将是主牌
-                            case Card.Suit.Joker0:
-                            case Card.Suit.Joker1:
-                                mainNumber = (playerLevels[lastFryShowPlayerId] + 11) % 13;
-                                mainColor = 4;
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                    // 如果最后亮牌的不是台上方
-                    else
-                    {
-                        // 最终亮主牌最大一家是台下方，这门主级牌和相应的花色牌就是主牌
-                        mainNumber = (lastFryShowCard.points + 1 + 11) % 13;
-                        int lastUpperPlayerId;
-                        switch (lastFryShowCard.suit)
-                        {
-                            case Card.Suit.Club:
-                                mainColor = 2;
-                                break;
-                            case Card.Suit.Diamond:
-                                mainColor = 0;
-                                break;
-                            case Card.Suit.Heart:
-                                mainColor = 3;
-                                break;
-                            case Card.Suit.Spade:
-                                mainColor = 1;
-                                break;
-                            // 无将
-                            case Card.Suit.Joker0:
-                            case Card.Suit.Joker1:
-                                // 逆序找到最近的台上方玩家
-                                lastUpperPlayerId = GetLastUpperPlayerId(lastFryShowPlayerId);
-                                Card lastUpperPlayerShowCard = showCards[lastUpperPlayerId][0];
-                                // 如果这台上方也出的大小鬼
-                                if (lastUpperPlayerShowCard.suit == Card.Suit.Joker0 || lastUpperPlayerShowCard.suit == Card.Suit.Joker0)
-                                {
-                                    // 这台上方的级数为主级数
-                                    mainNumber = (playerLevels[lastUpperPlayerId] + 11) % 13;
-                                }
-                                // 如果这台上方出的不是大小鬼
-                                else
-                                {
-                                    // 他出的牌的级数是主级数
-                                    mainNumber = (lastUpperPlayerShowCard.points + 1 + 11) % 13;
-                                }
-                                mainColor = 4;
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                }
-            }
-#else
-
-#endif
-        }
-        #endregion
 
         #region TRANSITION
         /// <summary>
@@ -4547,7 +4603,7 @@ namespace GameUtility
             {
                 currentBidCards[i].Clear();
             }
-            for(int i = 0; i < bidOrder.Length; i++)
+            for (int i = 0; i < bidOrder.Length; i++)
             {
                 bidOrder[i] = -1;
             }
