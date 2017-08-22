@@ -9,6 +9,8 @@
 //#define DEBUG_BID_1
 #undef DEBUG_BID_1
 
+#define READY_STAGE
+//#undef READY_STAGE
 
 using System;
 using System.Collections.Generic;
@@ -170,9 +172,14 @@ namespace server_0._0._1
         }
 
 
+        // 房主的 ID；-1 表示房间里面还没有人，还没有房主
+        static int m_roomMasterId = -1;
+        // 玩家的准备状态；房主默认是已经准备就绪的；m_playerReadyStates[2] = true 表示玩家 ID=2 准备就绪
+        static bool[] m_playerReadyStates = new bool[Dealer.playerNumber];
+
+
         // 统计信息表名
         static string statTableName = "stat";
-
 
         //// 网络通信线程的事件
         //static ManualResetEvent[] m_comServerEvents;
@@ -263,7 +270,6 @@ namespace server_0._0._1
             MyConsole.Log("服务器初始化完成", /*"Program",*/ MyConsole.LogType.Debug);
         }
 
-
         // 准备开始游戏
         // 带等候区的玩家进入房间
         static void GetReady()
@@ -310,6 +316,9 @@ namespace server_0._0._1
                 statObj.CopyTo(m_players.Last());
 #endif
             }
+
+
+
             //// 对每一个主程序中的玩家
             //for (int i = 0; i < m_players.Count; i++)
             //{
@@ -344,17 +353,51 @@ namespace server_0._0._1
             //    throw;
             //}
 
+            // 如果还没有在线玩家
+            if (m_players.Count == 0)
+            {
+                // 重置房主 ID
+                m_roomMasterId = -1;
+            }
+            // 如果已经有在线玩家
+            else
+            {
+                // 最早进入房间的玩家做房主
+                m_roomMasterId = m_players[0].id;
+            }
+
+            // 将房主 ID 发送到客户端
+            ComServer.Broadcast(m_roomMasterId);
+
+            // 检查各游戏玩家的准备状态
+            for (int i = 0; i < m_playerReadyStates.Length; i++)
+            {
+                int idx = m_players.FindIndex(player => player.id == i);
+                // 如果该 ID 的玩家在线
+                if (idx >= 0)
+                {
+                    m_playerReadyStates[i] = (bool)ComServer.Respond(i, "收到准备状态");
+                }
+                // 否则，当作没有准备好
+                else
+                {
+                    m_playerReadyStates[i] = false;
+                }
+            }
+            // 将各玩家的状态广播给客户端
+            ComServer.Broadcast(m_playerReadyStates);
+
         }
 
         static void Ready2Deal()
         {
             // 过渡更新
             m_dealer.Ready2Deal();
-            // 更新玩家的级数
-            for (int i = 0; i < m_dealer.playerLevels.Length; i++)
-            {
-                m_dealer.playerLevels[i] = m_players[i].level = 1;
-            }
+            //// 更新玩家的级数
+            //for (int i = 0; i < m_dealer.playerLevels.Length; i++)
+            //{
+            //    m_dealer.playerLevels[i] = m_players[i].level = 1;
+            //}
 
             // 将玩家级数同步到客户端
             ComServer.Broadcast(m_dealer.playerLevels);
@@ -404,9 +447,9 @@ namespace server_0._0._1
                 //ComServer.Respond(m_players[i].socket, m_dealer.upperPlayersId);
                 obj = ComServer.Respond(i, m_dealer.upperPlayersId);
 
-                // 发送玩家当前的等级
-                //ComServer.Respond(m_players[i].socket, m_players[i].playerInfo.level);
-                obj = ComServer.Respond(i, m_players[i].level);
+                //// 发送玩家当前的等级
+                ////ComServer.Respond(m_players[i].socket, m_players[i].playerInfo.level);
+                //obj = ComServer.Respond(i, m_dealer.playerLevels[i]);
 
             }
             m_handCardShowNumber = 0;
@@ -421,14 +464,18 @@ namespace server_0._0._1
                 // 设置所有玩家的级数为 1
                 for (int i = 0; i < m_players.Count; i++)
                 {
-                    m_players[i].level = 1;
+                    //m_players[i].level = 1;
+                    m_dealer.playerLevels[i] = 1;
                 }
             }
-            // 将玩家级数同步到荷官（包括上一局更新的级数）
-            for (int i = 0; i < m_dealer.playerLevels.Length; i++)
-            {
-                m_dealer.playerLevels[i] = m_players[i].level;
-            }
+            //// 将玩家级数同步到荷官（包括上一局更新的级数）
+            //for (int i = 0; i < m_dealer.playerLevels.Length; i++)
+            //{
+            //    m_dealer.playerLevels[i] = m_players[i].level;
+            //}
+
+            // 广播玩家级数
+            ComServer.Broadcast(m_dealer.playerLevels);
 
 #if (DEBUG_BID_1)
             // 如果在调试抢底
@@ -454,7 +501,8 @@ namespace server_0._0._1
                     //ComServer.Respond(m_players[i].socket, m_handCardShowNumber);
                     // 向 4 个客户端发送当前玩家的手牌
                     //ComServer.Respond(m_players[i].socket, Card.ToInt(m_players[i].playerInfo.cardInHand));
-                    obj = ComServer.Respond(i, Card.ToInt(m_players[i].cardInHand));
+                    //obj = ComServer.Respond(i, Card.ToInt(m_players[i].cardInHand));
+                    obj = ComServer.Respond(i, Card.ToInt(m_dealer.playersHandCard[i]));
 
                     try
                     {
@@ -510,10 +558,11 @@ namespace server_0._0._1
 
                     }
                     // 亮完牌之后，更新玩家的手牌
-                    m_players[i].cardInHand = m_dealer.playersHandCard[i];
+                    //m_players[i].cardInHand = m_dealer.playersHandCard[i];
                     // 将该玩家的手牌发送到客户端
                     //ComServer.Respond(m_players[i].socket, Card.ToInt(m_players[i].playerInfo.cardInHand));
-                    ComServer.Respond(i, Card.ToInt(m_players[i].cardInHand));
+                    //ComServer.Respond(i, Card.ToInt(m_players[i].cardInHand));
+                    ComServer.Respond(i, Card.ToInt(m_dealer.playersHandCard[i]));
 
                 }
                 for (int i = 0; i < m_players.Count; i++)
@@ -538,7 +587,7 @@ namespace server_0._0._1
                     for (int i = 0; i < m_players.Count; i++)
                     {
                         // 准备显示下一张牌
-                        m_players[i].cardInHand.Add(m_tempHandCards[i][0]);
+                        m_dealer.playersHandCard[i].Add(m_tempHandCards[i][0]);
                         m_tempHandCards[i].RemoveAt(0);
                     }
                     //m_handCardShowNumber++;
@@ -553,10 +602,12 @@ namespace server_0._0._1
                 // 直接把手牌发送到各个玩家
                 for (int i = 0; i < m_players.Count; i++)
                 {
-                    m_players[i].cardInHand = m_tempHandCards[i];
+                    //m_players[i].cardInHand = m_tempHandCards[i];
+                    m_dealer.playersHandCard[i] = m_tempHandCards[i];
                     // 将该玩家的手牌发送到客户端
                     //ComServer.Respond(m_players[i].socket, Card.ToInt(m_players[i].playerInfo.cardInHand));
-                    ComServer.Respond(i, Card.ToInt(m_players[i].cardInHand));
+                    //ComServer.Respond(i, Card.ToInt(m_players[i].cardInHand));
+                    ComServer.Respond(i, Card.ToInt(m_dealer.playersHandCard[i]));
 
                 }
                 // 并指定是此台上方玩家抢到底牌
@@ -595,7 +646,7 @@ namespace server_0._0._1
 
                 // 向 4 个客户端发送当前玩家的手牌
                 //ComServer.Respond(m_players[i].socket, Card.ToInt(m_players[i].playerInfo.cardInHand));
-                ComServer.Respond(i, Card.ToInt(m_players[i].cardInHand));
+                ComServer.Respond(i, Card.ToInt(m_dealer.playersHandCard[i]));
 
                 // 向该玩家发送当前可以亮牌的花色
                 //ComServer.Respond(m_players[i].socket, m_dealer.GetLegalBidColors(i/*,m_handCardShowNumber*/));
@@ -635,10 +686,10 @@ namespace server_0._0._1
 
                 }
                 // 更新玩家的手牌
-                m_players[i].cardInHand = m_dealer.playersHandCard[i];
+                m_dealer.playersHandCard[i] = m_dealer.playersHandCard[i];
                 // 将该玩家的手牌发送到客户端
                 //ComServer.Respond(m_players[i].socket, Card.ToInt(m_players[i].playerInfo.cardInHand));
-                ComServer.Respond(i, Card.ToInt(m_players[i].cardInHand));
+                ComServer.Respond(i, Card.ToInt(m_dealer.playersHandCard[i]));
 
             }
             for (int i = 0; i < m_players.Count; i++)
@@ -665,11 +716,11 @@ namespace server_0._0._1
             // 在最后摸牌结束后，将玩家的亮牌重新放回到手牌当中
             for (int i = 0; i < m_players.Count; i++)
             {
-                m_players[i].cardInHand.AddRange(m_dealer.currentBidCards[i]);
+                m_dealer.playersHandCard[i].AddRange(m_dealer.currentBidCards[i]);
                 // 将手牌发送到客户端
                 // 向 4 个客户端发送当前玩家的手牌
                 //ComServer.Respond(m_players[i].socket, Card.ToInt(m_players[i].playerInfo.cardInHand));
-                ComServer.Respond(i, Card.ToInt(m_players[i].cardInHand));
+                ComServer.Respond(i, Card.ToInt(m_dealer.playersHandCard[i]));
 
                 // 将庄家 ID 发送给所有玩家
                 //ComServer.Respond(m_players[i].socket, m_dealer.gotBottomPlayerId);
@@ -681,8 +732,9 @@ namespace server_0._0._1
             ComServer.Respond(m_dealer.gotBottomPlayerId, Card.ToInt(m_dealer.bottom));
 
             // 并将底牌加入到庄家手牌
-            m_players[m_dealer.gotBottomPlayerId].cardInHand.AddRange(m_dealer.bottom);
+            //m_players[m_dealer.gotBottomPlayerId].cardInHand.AddRange(m_dealer.bottom);
 
+            m_dealer.AddBottom(m_dealer.gotBottomPlayerId);
 
             //MyConsole.Log("排序之前");
             //List<Card> temp = new List<Card>(m_players[m_dealer.gotBottomPlayerId].cardInHand);
@@ -764,20 +816,22 @@ namespace server_0._0._1
             {
                 Console.WriteLine("玩家 id=" + m_dealer.gotBottomPlayerId + "正在埋牌");
                 // 检验埋底的合法性
-                judgement = m_dealer.IsLegalBury(m_buryCards);
+                judgement = m_dealer.IsLegalBury(m_buryCards, m_dealer.gotBottomPlayerId);
                 // 向客户端发送埋底合法性
                 //ComServer.Respond(m_players[m_dealer.gotBottomPlayerId].socket, judgement);
                 ComServer.Respond(m_dealer.gotBottomPlayerId, judgement);
                 // 如果玩家所埋的牌合法
                 if (judgement.isValid)
                 {
-                    // 将埋牌从玩家手牌中去除
-                    for (int i = 0; i < m_buryCards.Length; i++)
-                    {
-                        m_players[m_dealer.gotBottomPlayerId].cardInHand.Remove(m_buryCards[i]);
-                    }
-                    // 将埋牌放到底牌
-                    m_dealer.bottom = m_buryCards;
+                    //// 将埋牌从玩家手牌中去除
+                    //for (int i = 0; i < m_buryCards.Length; i++)
+                    //{
+                    //    m_players[m_dealer.gotBottomPlayerId].cardInHand.Remove(m_buryCards[i]);
+                    //}
+                    //// 将埋牌放到底牌
+                    //m_dealer.bottom = m_buryCards;
+
+                    m_dealer.BuryCards(m_dealer.gotBottomPlayerId, m_buryCards);
                 }
                 else// 如果玩家埋的牌不合法
                 {
@@ -801,7 +855,7 @@ namespace server_0._0._1
             // 清空玩家手牌；因为可能没人抢底，要重新发牌
             for (int i = 0; i < m_players.Count; i++)
             {
-                m_players[i].cardInHand.Clear();
+                m_dealer.playersHandCard[i].Clear();
             }
         }
 
@@ -876,11 +930,17 @@ namespace server_0._0._1
             if (hasShow)
             {
                 // 把当前亮牌玩家之前的亮牌重新加回去他的手牌里去
-                m_players[m_dealer.currentFryPlayerId].cardInHand.AddRange(m_dealer.showCards[m_dealer.currentFryPlayerId]);
+                //m_players[m_dealer.currkentFryPlayerId].cardInHand.AddRange(m_dealer.showCards[m_dealer.currentFryPlayerId]);
+
                 // 清空亮牌
-                m_dealer.showCards[m_dealer.currentFryPlayerId].Clear();
+                //m_dealer.showCards[m_dealer.currentFryPlayerId].Clear();
+
+                m_dealer.ReturnShowCards(m_dealer.currentFryPlayerId);
+
                 // 把手牌发到客户端
-                ComServer.Respond(m_dealer.currentFryPlayerId, Card.ToInt(m_players[m_dealer.currentFryPlayerId].cardInHand));
+                //ComServer.Respond(m_dealer.currentFryPlayerId, Card.ToInt(m_players[m_dealer.currentFryPlayerId].cardInHand));
+                ComServer.Respond(m_dealer.currentFryPlayerId, Card.ToInt(m_dealer.playersHandCard[m_dealer.currentFryPlayerId]));
+
             }
             // 如果当前玩家没有亮牌
             else
@@ -954,13 +1014,17 @@ namespace server_0._0._1
                     {
                         Console.WriteLine("玩家 id=" + m_dealer.currentFryPlayerId + " 成功亮牌，准备埋底");
 
-                        // 将亮牌加入筹码
-                        m_dealer.showCards[m_dealer.currentFryPlayerId].AddRange(m_addFryCards);
-                        // 将亮牌从玩家手牌中去除
-                        for (int i = 0; i < m_addFryCards.Length; i++)
-                        {
-                            m_players[m_dealer.currentFryPlayerId].cardInHand.Remove(m_addFryCards[i]);
-                        }
+                        //// 将亮牌加入筹码
+                        //m_dealer.showCards[m_dealer.currentFryPlayerId].AddRange(m_addFryCards);
+                        //// 将亮牌从玩家手牌中去除
+                        //for (int i = 0; i < m_addFryCards.Length; i++)
+                        //{
+                        //    m_players[m_dealer.currentFryPlayerId].cardInHand.Remove(m_addFryCards[i]);
+                        //}
+
+                        m_dealer.ShowCards(m_dealer.currentFryPlayerId, m_addFryCards);
+
+
                         // 客户端会自行将亮牌从手牌中去除，不用从服务器发送过去了
                         // 更新炒底的筹码下界
                         m_dealer.fryCardLowerBound = m_dealer.showCards[m_dealer.currentFryPlayerId].Count;
@@ -972,6 +1036,10 @@ namespace server_0._0._1
                         m_dealer.lastFryShowPlayerId = m_dealer.currentFryPlayerId;
                         // 增加一个人完成炒底亮牌
                         m_dealer.UpdateFryShowHistory();
+                        // 将该玩家的亮牌点数存放到记录里面
+                        m_dealer.showPointsHistory.Add(m_addFryCards[0].points);
+                        // 存储更新庄家信息
+                        m_dealer.StoreBankerIdHistory(m_addFryCards[0].points);
                     }
                     else// 如果不合法
                     {
@@ -1039,7 +1107,9 @@ namespace server_0._0._1
                 ComServer.Respond(m_dealer.currentFryPlayerId, Card.ToInt(m_dealer.bottom));
 
                 // 将底牌加入到炒底玩家的手牌当中去
-                m_players[m_dealer.currentFryPlayerId].cardInHand.AddRange(m_dealer.bottom);
+                //m_players[m_dealer.currentFryPlayerId].cardInHand.AddRange(m_dealer.bottom);
+
+                m_dealer.AddBottom(m_dealer.currentFryPlayerId);
             }
             else// 如果玩家不跟
             {
@@ -1099,7 +1169,7 @@ namespace server_0._0._1
             {
                 Console.WriteLine("玩家 id=" + m_dealer.currentFryPlayerId + "正在埋牌");
                 // 检验埋底的合法性
-                judgement = m_dealer.IsLegalBury(m_buryCards);
+                judgement = m_dealer.IsLegalBury(m_buryCards, m_dealer.currentFryPlayerId);
                 // 向客户端发送埋底合法性
                 //ComServer.Respond(m_players[m_dealer.currentFryPlayerId].socket, judgement);
                 ComServer.Respond(m_dealer.currentFryPlayerId, judgement);
@@ -1107,13 +1177,15 @@ namespace server_0._0._1
                 // 如果玩家所埋的牌合法
                 if (judgement.isValid)
                 {
-                    // 将埋牌从玩家手牌中去除
-                    for (int i = 0; i < m_buryCards.Length; i++)
-                    {
-                        m_players[m_dealer.currentFryPlayerId].cardInHand.Remove(m_buryCards[i]);
-                    }
-                    // 将埋牌放到底牌
-                    m_dealer.bottom = m_buryCards;
+                    //// 将埋牌从玩家手牌中去除
+                    //for (int i = 0; i < m_buryCards.Length; i++)
+                    //{
+                    //    m_players[m_dealer.currentFryPlayerId].cardInHand.Remove(m_buryCards[i]);
+                    //}
+                    //// 将埋牌放到底牌
+                    //m_dealer.bottom = m_buryCards;
+
+                    m_dealer.BuryCards(m_dealer.currentFryPlayerId, m_buryCards);
                 }
                 else// 如果玩家埋的牌不合法
                 {
@@ -1154,10 +1226,15 @@ namespace server_0._0._1
             for (int j = 0; j < m_players.Count; j++)
             {
                 // 将炒底的亮牌重新放到玩家的手牌里去
-                m_players[j].cardInHand.AddRange(m_dealer.showCards[j]);
+                //m_players[j].cardInHand.AddRange(m_dealer.showCards[j]);
+
+                m_dealer.ReturnShowCards(j);
+
                 // 向玩家发送手牌
                 //ComServer.Respond(m_players[j].socket, Card.ToInt(m_players[j].playerInfo.cardInHand/*.ToArray()*/));
-                ComServer.Respond(j, Card.ToInt(m_players[j].cardInHand/*.ToArray()*/));
+                //ComServer.Respond(j, Card.ToInt(m_players[j].cardInHand/*.ToArray()*/));
+                ComServer.Respond(j, Card.ToInt(m_dealer.playersHandCard[j]));
+
             }
             //// 清空亮牌
             //for (int j = 0; j < m_players.Count; j++)
@@ -1409,7 +1486,7 @@ namespace server_0._0._1
                     Card.PrintDeck(m_dealCards);
 
                     // 用来判断出牌合法性的所有信息都包含在 Dealer 里头
-                    Judgement judgement = m_dealer.IsLegalDeal(m_players.ToArray(), m_dealCards);
+                    Judgement judgement = m_dealer.IsLegalDeal(/*m_players.ToArray(), */m_dealCards);
                     Console.Write(judgement.isValid);
                     Console.Write(' ');
                     Console.WriteLine(judgement.message);
@@ -1431,12 +1508,15 @@ namespace server_0._0._1
                         //{
                         m_dealer.UpdateFirstHome(m_dealer.currentPlayerId);
                         //}
-                        // 将选牌从手牌中扣除
-                        for (int j = 0; j < m_dealCards.Length; j++)
-                        {
-                            // 找到选牌在手牌中的位置
-                            m_players[m_dealer.currentPlayerId].cardInHand.Remove(m_dealCards[j]);
-                        }
+                        //// 将选牌从手牌中扣除
+                        //for (int j = 0; j < m_dealCards.Length; j++)
+                        //{
+                        //    // 找到选牌在手牌中的位置
+                        //    m_players[m_dealer.currentPlayerId].cardInHand.Remove(m_dealCards[j]);
+                        //}
+
+                        m_dealer.HandOut(m_dealer.currentPlayerId, m_dealCards);
+
                         // 如果这是首家
                         // 测试：直接假定 ID=0 的玩家是首家
                         // TODO: 要根据牌的大小确定下轮的首家
@@ -1453,7 +1533,8 @@ namespace server_0._0._1
                     // 向出牌玩家发送手牌
                     // 如果出牌合法，这手牌有所减少；否则，手牌没有改变
                     //ComServer.Respond(m_players[m_dealer.currentPlayerId].socket, Card.ToInt(m_players[m_dealer.currentPlayerId].playerInfo.cardInHand));
-                    ComServer.Respond(m_dealer.currentPlayerId, Card.ToInt(m_players[m_dealer.currentPlayerId].cardInHand));
+                    //ComServer.Respond(m_dealer.currentPlayerId, Card.ToInt(m_players[m_dealer.currentPlayerId].cardInHand));
+                    ComServer.Respond(m_dealer.currentPlayerId, Card.ToInt(m_dealer.playersHandCard[m_dealer.currentPlayerId]));
 
                     for (int i = 0; i < m_players.Count; i++)
                     {
@@ -1510,11 +1591,11 @@ namespace server_0._0._1
                             //    m_dealer.addLevel();
                             //else
                             m_dealer.addScore();
-                            // 将玩家分数更新到主线程
-                            for (int i = 0; i < m_dealer.score.Length; i++)
-                            {
-                                m_players[i].score = m_dealer.score[i];
-                            }
+                            //// 将玩家分数更新到主线程
+                            //for (int i = 0; i < m_dealer.score.Length; i++)
+                            //{
+                            //    m_players[i].score = m_dealer.score[i];
+                            //}
                         }
                         // 将分数同步到客户端
                         ComServer.Broadcast(m_dealer.score);
@@ -1578,11 +1659,11 @@ namespace server_0._0._1
         {
             // 更新玩家的级数；更新台上方
             m_dealer.addLevel();
-            for (int i = 0; i < m_dealer.playerLevels.Length; i++)
-            {
-                // 更新主线程中玩家的级数
-                m_players[i].level = m_dealer.playerLevels[i];
-            }
+            //for (int i = 0; i < m_dealer.playerLevels.Length; i++)
+            //{
+            //    // 更新主线程中玩家的级数
+            //    m_players[i].level = m_dealer.playerLevels[i];
+            //}
             // 发送新级数到客户端
             ComServer.Broadcast(m_dealer.playerLevels);
 
@@ -1611,7 +1692,7 @@ namespace server_0._0._1
             // 清空玩家手牌
             for (int i = 0; i < m_players.Count; i++)
             {
-                m_players[i].cardInHand.Clear();
+                m_dealer.playersHandCard[i].Clear();
             }
 #if (DATABASE)
             // 将玩家信息统计之后更新到数据库服务器
@@ -1632,13 +1713,13 @@ namespace server_0._0._1
         // 更新荷官需要掌握的信息
         static void UpdateDealer()
         {
-            for (int i = 0; i < m_players.Count; i++)
-            {
-                // 更新荷官掌握的玩家手牌
-                m_dealer.playersHandCard[i] = m_players[i].cardInHand;
-                //// 更新玩家的级数
-                //m_dealer.playerLevels[i] = m_players[i].level;
-            }
+            //for (int i = 0; i < m_players.Count; i++)
+            //{
+            //    // 更新荷官掌握的玩家手牌
+            //    m_dealer.playersHandCard[i] = m_players[i].cardInHand;
+            //    //// 更新玩家的级数
+            //    //m_dealer.playerLevels[i] = m_players[i].level;
+            //}
             // 更新台上方玩家
             //m_dealer.UpdateUpperPlayers();
 
@@ -1657,12 +1738,21 @@ namespace server_0._0._1
             //ComServer.Broadcast(m_dealer.mainColor);
         }
 
-        // 检查游戏是否准备好，即是否 4 个对战玩家都在线
+        // 检查游戏是否准备好，即
         static bool GameIsReady()
         {
             for (int i = 0; i < Dealer.playerNumber; i++)
             {
+                // 是否 4 个对战玩家都在线
                 if (m_players.FindIndex(player => player.id == i) < 0)
+                {
+                    return false;
+                }
+            }
+            // 是否所有玩家都准备好
+            for(int i = 0; i < m_playerReadyStates.Length; i++)
+            {
+                if (!m_playerReadyStates[i])
                 {
                     return false;
                 }

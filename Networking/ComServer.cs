@@ -33,7 +33,7 @@ namespace Networking
         // 分发给玩家的 ID 卡；玩家连接上服务器后，发他一个；如果他断线了，我们就收回来，待会发给其他人
         static List<int> m_idCards;
 
-        // 客户端列表
+        // 游戏客户端列表
         static List<Player> m_players;
         public static List<Player> players
         {
@@ -42,6 +42,14 @@ namespace Networking
                 return m_players;
             }
         }
+
+        // 观战客户端列表
+        static List<Player> m_watchPlayers = new List<Player>();
+        public static List<Player> watchPlayers
+        {
+            get { return m_watchPlayers; }
+        }
+
 
         //// 客户端的 socket 列表
         //public static List<Socket> clientSockets = new List<Socket>();
@@ -159,6 +167,12 @@ namespace Networking
         public static object Respond(int playerId, object sth, int channel = 0)
         {
             Player thisPlayer = m_players.Find(player => player.id == playerId);
+            // 如果在游戏玩家中间找不到
+            if (thisPlayer == null)
+            {
+                // 那一定要去观战玩家中去找
+                thisPlayer = m_watchPlayers.Find(player => player.id == playerId);
+            }
             Message message;
             try
             {
@@ -277,7 +291,7 @@ namespace Networking
             while (true)
             {
                 MyConsole.Log("等待客户端接入"/*, Thread.CurrentThread.Name*/, MyConsole.LogType.Debug);
-                // 指示正在等待客户端连接
+
                 m_waitingCustomerEvent.Set();
                 // 接收客户端连接
                 Socket socket = m_socket.Accept();
@@ -298,32 +312,48 @@ namespace Networking
 
                 // 指示没有完成接待
                 m_doneReceptEvent.Reset();
-
                 MyConsole.Log("接收连接 " + socket.RemoteEndPoint.ToString(),/* Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
-
                 // 分配 ID 卡
                 int id = DistributeId();
-                //try
-                //{
-                //// 获取名字
-                //string name = (string)Respond(socket, id);
-                // 新增客户端
-                m_players.Add(new Player("temp-name", id, socket));
-                //Player thisPlayer = m_players.Last();
-                // 启动邮差
-                //StartPostman(thisPlayer);
 
-                // 获取名字，发送 ID
-                MyConsole.Log("准备从" + socket.RemoteEndPoint.ToString() + "获取用户名",/* Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
+                // 指示正在等待客户端连接
+                if (m_players.Count < 4)
+                {
+                    //try
+                    //{
+                    //// 获取名字
+                    //string name = (string)Respond(socket, id);
+                    // 新增客户端
+                    m_players.Add(new Player("temp-name", id, socket));
+                    //Player thisPlayer = m_players.Last();
+                    // 启动邮差
+                    //StartPostman(thisPlayer);
 
-                string name = (string)Respond(id, id, 2);
-                m_players.Last().name = name;
+                    // 获取名字，发送 ID
+                    MyConsole.Log("准备从" + socket.RemoteEndPoint.ToString() + "获取用户名",/* Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
+
+                    string name = (string)Respond(id, id, 2);
+                    m_players.Last().name = name;
+                    //Console.WriteLine("用户" + name + "进入房间；ID = " + id.ToString());
+                    MyConsole.Log("用户" + name + "进入房间；ID = " + id.ToString(), /*Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
+
+                }
+                // 如果游戏玩家已经满员
+                else
+                {
+                    // 将连接的玩家加入观战玩家列表
+                    m_watchPlayers.Add(new Player("temp-name", id, socket));
+                    // 获取名字，发送 ID
+                    MyConsole.Log("准备从" + socket.RemoteEndPoint.ToString() + "获取用户名",/* Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
+                    string name = (string)Respond(id, id, 2);
+                    m_watchPlayers.Last().name = name;
+                    //Console.WriteLine("用户" + name + "进入房间；ID = " + id.ToString());
+                    MyConsole.Log("用户" + name + "进入房间；ID = " + id.ToString(), /*Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
+                }
 
                 // 先锁住对该客户端的网络通信，好在主线程里做同步
                 //m_players.Last().Lock();
 
-                //Console.WriteLine("用户" + name + "进入房间；ID = " + id.ToString());
-                MyConsole.Log("用户" + name + "进入房间；ID = " + id.ToString(), /*Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
 
                 // 发送给新加入客户端，指示要先运行的线程的代码
                 //Respond(id, idx, 2);
@@ -351,7 +381,6 @@ namespace Networking
                 m_doneReceptEvent.Set();
                 // 触发先被阻塞的线程启动
                 //m_events[idx].Set();
-
             }
         }
 
