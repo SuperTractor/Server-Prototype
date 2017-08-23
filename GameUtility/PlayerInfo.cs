@@ -8,9 +8,13 @@ namespace GameUtility
     [Serializable]
     public class PlayerInfo
     {
+        
         public int id { get; set; }
-        // 玩家的名字
-        public string name { get; set; }
+        // 用户名
+        public string username { get; set; }
+        // 昵称
+        public string nickname { get; set; }
+
         //// 玩家的等级
         //public int level { get; set; }
         //// 玩家的分数
@@ -51,17 +55,14 @@ namespace GameUtility
         // 总逃跑次数
         public int totalRunTimes { get; set; }
 
-
-
-
         public PlayerInfo(string name)
         {
-            this.name = name;
+            this.username = name;
             //cardInHand = new List<Card>();
         }
         public PlayerInfo(string name, int id)
         {
-            this.name = name;
+            this.username = name;
             this.id = id;
             //cardInHand = new List<Card>();
         }

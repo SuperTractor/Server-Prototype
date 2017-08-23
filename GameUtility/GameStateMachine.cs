@@ -82,7 +82,8 @@ namespace GameUtility
             PlayerHandCardAllEmpty, // 所有玩家的手牌为空
             DoneFight2Score,    // 完成对战-计分缓冲阶段的清理, 初始化
             DoneScore,  // 完成计分
-            DoneScore2Deal // 完成计分-发牌缓冲阶段的清理, 初始化
+            DoneScore2Deal, // 完成计分-发牌缓冲阶段的清理, 初始化
+            FinishRounds        // 完成指定局数
 
         };
 
@@ -199,6 +200,10 @@ namespace GameUtility
                     break;
                 case Signal.DoneScore2Deal:
                     m_state = State.Deal;
+                    break;
+                    // 完成指定局数后，回到准备阶段
+                case Signal.FinishRounds:
+                    m_state = State.GetReady;
                     break;
             }
         }

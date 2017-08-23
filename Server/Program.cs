@@ -1,5 +1,5 @@
-﻿//#define DATABASE
-#undef DATABASE
+﻿#define DATABASE
+//#undef DATABASE
 
 // 是否调试规则；不是调试规则，就是调试流程
 //#define RULE
@@ -56,6 +56,8 @@ namespace server_0._0._1
         // 玩家列表
         //static Player[] m_players;
         static List<PlayerInfo> m_players;
+
+
         // 从 Bmob 提取的玩家统计数据
         //static List<StatObject> m_userStats;
         //static StatObject m_userStat;
@@ -107,7 +109,7 @@ namespace server_0._0._1
         static int m_handOutTimeLimit = 100000000;
 #else
         // 抢底阶段显示手牌的延迟(毫秒)
-        static int m_touchCardDelay = 1000;
+        static int m_touchCardDelay = 1;
         // 最后抢底阶段有的思考时间（毫秒）
         static int m_lastBidDelay = 5000;
         // 抢底阶段：庄家埋底思考时间
@@ -177,15 +179,19 @@ namespace server_0._0._1
         // 玩家的准备状态；房主默认是已经准备就绪的；m_playerReadyStates[2] = true 表示玩家 ID=2 准备就绪
         static bool[] m_playerReadyStates = new bool[Dealer.playerNumber];
 
-
         // 统计信息表名
         static string statTableName = "stat";
+
+        const int defaultRound = 5;
+        // 游戏的局数；默认是 5 局
+        static int m_gameRoundSetting = defaultRound;
 
         //// 网络通信线程的事件
         //static ManualResetEvent[] m_comServerEvents;
         static void Initialize()
         {
             Thread.CurrentThread.Name = "主线程";
+
 
             // 初始化 bmob 实例
             //BmobInstance.Initialize();
@@ -318,6 +324,14 @@ namespace server_0._0._1
             }
 
 
+            // 接收玩家发过来的玩家信息
+            for(int i = 0; i < m_players.Count; i++)
+            {
+                PlayerInfo thisPlayerInfo = (PlayerInfo)ComServer.Respond(m_players[i].id,"收到玩家信息");
+                // 复制基本玩家信息
+                m_players[i].nickname = thisPlayerInfo.nickname;
+            }
+
 
             //// 对每一个主程序中的玩家
             //for (int i = 0; i < m_players.Count; i++)
@@ -387,6 +401,46 @@ namespace server_0._0._1
             // 将各玩家的状态广播给客户端
             ComServer.Broadcast(m_playerReadyStates);
 
+            // 如果有房主
+            if (m_roomMasterId >= 0)
+            {
+                // 从房主处接收踢出房间玩家 ID
+                int kickedPlayerId = (int)ComServer.Respond(m_roomMasterId, "收到要踢玩家 ID");
+                // 向所有玩家发送被踢玩家 ID
+                ComServer.Broadcast(kickedPlayerId);
+
+
+                // 检查房主是否有更新游戏局数
+                bool updatedRoundSetting = (bool)ComServer.Respond(m_roomMasterId, "收到局数更新");
+                // 如果房主的确更新了游戏局数
+                if (updatedRoundSetting)
+                {
+                    // 接收房主更新的局数
+                    m_gameRoundSetting = (int)ComServer.Respond(m_roomMasterId, "收到最新局数");
+                }
+                // 广播房主是否更新局数
+                ComServer.Broadcast(updatedRoundSetting);
+                // 如果房主的确更新了游戏局数
+                if (updatedRoundSetting)
+                {
+                    // 广播最新的游戏局数
+                    ComServer.Broadcast(m_gameRoundSetting);
+                }
+               
+            }
+            // 广播最新的游戏局数
+            ComServer.Broadcast(m_gameRoundSetting);
+
+            // 如果房间里面没人了；服务器该睡觉了
+            if (m_players.Count == 0)
+            {
+                // 重置一下服务器
+                // 设置默认局数
+                m_gameRoundSetting = defaultRound;
+                // 设置没有房主
+                m_roomMasterId = -1;
+            }
+
         }
 
         static void Ready2Deal()
@@ -406,6 +460,8 @@ namespace server_0._0._1
             {
                 obj = ComServer.Respond(i, true);
             }
+
+
         }
 
         static void DealCards()
@@ -430,6 +486,9 @@ namespace server_0._0._1
             m_cardSorter = new CardSorter(m_dealer);
             // 向客户端发送一次排序家
             ComServer.Broadcast(m_cardSorter);
+
+            // 广播当前局数
+            ComServer.Broadcast(m_dealer.round);
         }
 
         static void Deal2Bid()
@@ -1482,7 +1541,7 @@ namespace server_0._0._1
                 // 如果有出牌
                 if (m_dealCards.Length > 0)
                 {
-                    Console.WriteLine("{0} 的出牌", m_players[m_dealer.currentPlayerId].name);
+                    Console.WriteLine("{0} 的出牌", m_players[m_dealer.currentPlayerId].username);
                     Card.PrintDeck(m_dealCards);
 
                     // 用来判断出牌合法性的所有信息都包含在 Dealer 里头
@@ -1706,7 +1765,6 @@ namespace server_0._0._1
             {
                 ComServer.Broadcast(m_players[i]);
             }
-
 
         }
 
@@ -2011,7 +2069,16 @@ namespace server_0._0._1
                                 break;
                             case GameStateMachine.State.Score2Deal:
                                 Score2Deal();
-                                m_gameStateMachine.Update(GameStateMachine.Signal.DoneScore2Deal);
+                                // 如果已经游戏完指定局数
+                                if (m_dealer.round > m_gameRoundSetting)
+                                {
+                                    m_gameStateMachine.Update(GameStateMachine.Signal.FinishRounds);
+                                }
+                                // 还没有完成指定级数
+                                else
+                                {
+                                    m_gameStateMachine.Update(GameStateMachine.Signal.DoneScore2Deal);
+                                }
                                 break;
                         }
                     }

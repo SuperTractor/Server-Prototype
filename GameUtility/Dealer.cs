@@ -1046,7 +1046,7 @@ namespace GameUtility
         // 玩家当前的手牌
         public List<Card>[] playersHandCard { get; set; }
 
-        // 玩家的级数，由服务器主程序同步进来
+        // 玩家的级数
         public int[] playerLevels { get; set; }
 
         // 底牌接口
@@ -2501,7 +2501,7 @@ namespace GameUtility
         // 当前每个玩家的分数
         public int[] score;
 
-        // 当前盘数，出完手牌为 1 盘
+        // 当前盘数，出完手牌为 1 盘；在积分到发牌的过渡阶段进行更新
         private int m_round = 1;
         public int round
         {
@@ -4767,9 +4767,49 @@ namespace GameUtility
         {
             // 设置盘数为 1 
             m_round = 1;
+    
+            // 清空上一次对战的历史记录
+            score = new int[4];
+            for (int i = 0; i < 4; i++)
+                score[i] = 0;
 
+            m_totalCard = new Card[Card.cardNumberOfOnePack * packNumber];
+            for (int i = 0; i < packNumber; i++)
+            {
+                Card.GetCardSet().CopyTo(m_totalCard, i * Card.cardNumberOfOnePack);
+            }
+            m_playerCard = new Card[cardInHandInitialNumber * 4];
+            m_bottom = new Card[bottomCardNumber];
+
+            playerLevels = new int[playerNumber];
+
+            playersHandCard = new List<Card>[playerNumber];
+
+            currentBidCards = new List<Card>[playerNumber];
+            //currentLegalBidColors = new List<Card.Suit>[playerNumber];
+            //Shuffle();
+            //Cut();
+            // 为炒底阶段玩家亮牌分配内存
+            showCards = new List<Card>[playerNumber];
+            showCardsHistory = new List<Card>[playerNumber];
+            // 为玩家对战阶段出牌分配内存
+            handOutCards = new List<Card>[playerNumber];
+
+            for (int i = 0; i < playerNumber; i++)
+            {
+                playersHandCard[i] = new List<Card>();
+                showCards[i] = new List<Card>();
+                showCardsHistory[i] = new List<Card>();
+                handOutCards[i] = new List<Card>();
+                currentBidCards[i] = new List<Card>();
+            }
+            bankerPlayerId = new List<int>();
             // 所有玩家都是台上方
-            m_upperPlayersId = new int[4] { 0, 1, 2, 3 };
+            m_upperPlayersId = new int[playerNumber] { 0, 1, 2, 3 };
+            // 所有玩家的级数都是 1
+            playerLevels = new int[playerNumber] { 1, 1, 1, 1 };
+            //playerLevels = new int[playerNumber] {27,27,27,27 };
+
         }
 
         // 过渡阶段处理函数
