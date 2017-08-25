@@ -92,7 +92,7 @@ namespace server_0._0._1
                 // 抢底阶段显示手牌的延迟(毫秒)
         static int m_touchCardDelay = 1;
         // 最后抢底阶段有的思考时间（毫秒）
-        static int m_lastBidDelay = 5000;
+        static int m_lastBidDelay = 10000;
                 // 抢底阶段：庄家埋底思考时间
         static int m_bidBuryBottomDelay = 3000000;
                 // 亮牌思考时间（毫秒）
@@ -111,7 +111,7 @@ namespace server_0._0._1
         // 抢底阶段显示手牌的延迟(毫秒)
         static int m_touchCardDelay = 1;
         // 最后抢底阶段有的思考时间（毫秒）
-        static int m_lastBidDelay = 5000;
+        static int m_lastBidDelay = 10000;
         // 抢底阶段：庄家埋底思考时间
         static int m_bidBuryBottomDelay = 30000;
         // 亮牌思考时间（毫秒）
@@ -125,7 +125,7 @@ namespace server_0._0._1
         // 4 个玩家都出牌后的延迟（毫秒）
         static int m_clearPlayCardDelay = 1500;
         // 玩家拥有的出牌思考时间(毫秒)
-        static int m_handOutTimeLimit = 30000;
+        static int m_handOutTimeLimit = 3000000;
 #endif
 
         // 庄家埋底计时器
@@ -185,6 +185,41 @@ namespace server_0._0._1
         const int defaultRound = 5;
         // 游戏的局数；默认是 5 局
         static int m_gameRoundSetting = defaultRound;
+
+        // 存储逃跑玩家的名字
+        static List<string> m_runPlayerNames = new List<string>();
+
+        /// <summary>
+        /// 重置服务器
+        /// </summary>
+        static void Reset()
+        {
+            playersIsConnected = new bool[Dealer.playerNumber];
+            // 新建荷官
+            m_dealer = new Dealer();
+            // 新建摸牌效果辅助计时器
+            m_touchCardStopwatch = new Stopwatch();
+            // 新建炒底阶段亮牌计时器
+            m_showCardStopwatch = new Stopwatch();
+            // 新建炒底阶段埋底计时器
+            m_buryCardStopwatch = new Stopwatch();
+            // 新建延迟清理桌面计时器
+            m_clearPlayCardStopwatch = new Stopwatch();
+            // 新建出牌计时器
+            m_handOutStopwatch = new Stopwatch();
+            // 新建最后抢底阶段的计时器
+            m_lastBidStopwatch = new Stopwatch();
+            // 新建庄家埋底的计时器
+            m_bidBuryStopwatch = new Stopwatch();
+            // 新建庄家寻友计时器
+            m_findFriendStopwatch = new Stopwatch();
+            // 新建寻友计时器
+            m_findFriendLingerStopwatch = new Stopwatch();
+            // 新建暂存手牌数组
+            m_tempHandCards = new List<Card>[Dealer.playerNumber];
+
+            MyConsole.Log("服务器重置完毕");
+        }
 
         //// 网络通信线程的事件
         //static ManualResetEvent[] m_comServerEvents;
@@ -325,11 +360,13 @@ namespace server_0._0._1
 
 
             // 接收玩家发过来的玩家信息
-            for(int i = 0; i < m_players.Count; i++)
+            for (int i = 0; i < m_players.Count; i++)
             {
-                PlayerInfo thisPlayerInfo = (PlayerInfo)ComServer.Respond(m_players[i].id,"收到玩家信息");
+                PlayerInfo thisPlayerInfo = (PlayerInfo)ComServer.Respond(m_players[i].id, "收到玩家信息");
+
                 // 复制基本玩家信息
-                m_players[i].nickname = thisPlayerInfo.nickname;
+                //m_players[i].nickname = thisPlayerInfo.nickname;
+                m_players[i].CopyBasicInfoFrom(thisPlayerInfo);
             }
 
 
@@ -426,7 +463,7 @@ namespace server_0._0._1
                     // 广播最新的游戏局数
                     ComServer.Broadcast(m_gameRoundSetting);
                 }
-               
+
             }
             // 广播最新的游戏局数
             ComServer.Broadcast(m_gameRoundSetting);
@@ -489,6 +526,8 @@ namespace server_0._0._1
 
             // 广播当前局数
             ComServer.Broadcast(m_dealer.round);
+            // 广播分数；一局开始，必须要清零；清零已经在score2deal做了
+
         }
 
         static void Deal2Bid()
@@ -548,6 +587,7 @@ namespace server_0._0._1
         // 返回是否结束摸牌
         static bool Touch()
         {
+            bool isOk;
             // 如果台上方不止一个
             if (m_dealer.upperPlayersId.Length > 1)
             {
@@ -655,6 +695,13 @@ namespace server_0._0._1
                     //m_touchCardStopwatch.Start();
                     m_touchCardStopwatch.Restart();
                 }
+
+                // 如果暂存手牌数组均为空，则说明摸牌已经结束
+                isOk = true;
+                for (int i = 0; i < m_tempHandCards.Length; i++)
+                {
+                    isOk &= m_tempHandCards[i].Count == 0;
+                }
             }
             else// 如果台上方只有一个
             {
@@ -669,18 +716,18 @@ namespace server_0._0._1
                     ComServer.Respond(i, Card.ToInt(m_dealer.playersHandCard[i]));
 
                 }
-                // 并指定是此台上方玩家抢到底牌
-                m_dealer.gotBottomPlayerId = m_dealer.upperPlayersId[0];
+                //// 并指定是此台上方玩家抢到底牌
+                //m_dealer.gotBottomPlayerId = m_dealer.upperPlayersId[0];
+                //// 记录此台上方抢到底牌
+                //m_dealer.BidTimes[m_dealer.upperPlayersId[0]]++;
+
+                isOk = true;
+
             }
 
             //// 如果摸牌数达到手牌数, 说明摸牌已经结束
             //return m_handCardShowNumber >= Dealer.cardInHandInitialNumber;
-            // 如果暂存手牌数组均为空，则说明摸牌已经结束
-            bool isOk = true;
-            for (int i = 0; i < m_tempHandCards.Length; i++)
-            {
-                isOk &= m_tempHandCards[i].Count == 0;
-            }
+
             return isOk;
         }
 
@@ -891,6 +938,13 @@ namespace server_0._0._1
                     //m_dealer.bottom = m_buryCards;
 
                     m_dealer.BuryCards(m_dealer.gotBottomPlayerId, m_buryCards);
+
+                    // 统计埋底次数
+                    m_dealer.buryTimes[m_dealer.gotBottomPlayerId]++;
+                    // 统计埋底分数
+                    m_dealer.buryScore[m_dealer.gotBottomPlayerId] += m_dealer.countScore(m_dealer.CardArrayToCardList(m_buryCards));
+
+
                 }
                 else// 如果玩家埋的牌不合法
                 {
@@ -1083,6 +1137,9 @@ namespace server_0._0._1
 
                         m_dealer.ShowCards(m_dealer.currentFryPlayerId, m_addFryCards);
 
+                        //计算炒底次数
+                        m_dealer.fryTimes[m_dealer.currentFryPlayerId]++;
+
 
                         // 客户端会自行将亮牌从手牌中去除，不用从服务器发送过去了
                         // 更新炒底的筹码下界
@@ -1245,6 +1302,12 @@ namespace server_0._0._1
                     //m_dealer.bottom = m_buryCards;
 
                     m_dealer.BuryCards(m_dealer.currentFryPlayerId, m_buryCards);
+
+                    // 统计埋底次数
+                    m_dealer.buryTimes[m_dealer.currentFryPlayerId]++;
+                    // 统计埋底分数
+                    m_dealer.buryScore[m_dealer.currentFryPlayerId] += m_dealer.countScore(m_dealer.CardArrayToCardList(m_buryCards));
+
                 }
                 else// 如果玩家埋的牌不合法
                 {
@@ -1385,6 +1448,7 @@ namespace server_0._0._1
                 ComServer.Respond(j, hasOperation);
 
             }
+            // 如果庄家有操作了
             if (hasOperation)
             {
                 // 告诉所有玩家，庄家是否选择单打
@@ -1403,6 +1467,14 @@ namespace server_0._0._1
                         //ComServer.Respond(m_players[j].socket, m_dealer.signCard);
                         ComServer.Respond(j, m_dealer.signCard);
                     }
+                    // 统计找朋友次数
+                    m_dealer.findFriendTimes[bankerId]++;
+                }
+                // 如果庄家选择单打
+                else
+                {
+                    // 统计单打次数
+                    m_dealer.singleTimes[bankerId]++;
                 }
             }
             return isOk;
@@ -1565,7 +1637,7 @@ namespace server_0._0._1
                         // 若压制则更新首家
                         //if (judgement.message == "shot")
                         //{
-                        m_dealer.UpdateFirstHome(m_dealer.currentPlayerId);
+                        //m_dealer.UpdateFirstHome(m_dealer.currentPlayerId);
                         //}
                         //// 将选牌从手牌中扣除
                         //for (int j = 0; j < m_dealCards.Length; j++)
@@ -1620,10 +1692,6 @@ namespace server_0._0._1
                         }
                         // 存储出牌到荷官
                         m_dealer.handOutCards[m_dealer.currentPlayerId] = new List<Card>(m_dealCards);
-                        // 下一玩家出牌
-                        m_dealer.handOutPlayerCount++;
-                        // 必须保证首家 ID 已经确定了，才能更新下一出牌玩家 ID
-                        m_dealer.UpdateNextPlayer();
 
                         //// 如果最后一个玩家出牌
                         //if (m_dealer.handOutPlayerCount == 0)
@@ -1635,10 +1703,19 @@ namespace server_0._0._1
                         //    // 进入下一轮出牌
                         //    m_dealer.circle++;
                         //}
+                        // 下一玩家出牌
+                        m_dealer.handOutPlayerCount++;
 
                         // 如果最后一个玩家出牌
                         if (m_dealer.handOutPlayerCount == 0)
                         {
+                            // 更新首家
+                            m_dealer.UpdateFirstHome();
+
+
+                            // 先计算分数
+                            m_dealer.addScore();
+
                             // 标志需要 1 次延时
                             m_doneClearPlayCardDelay = false;
                             // 清空荷官中存储的本轮玩家出牌
@@ -1649,13 +1726,20 @@ namespace server_0._0._1
                             //if (m_dealer.AllPlayersHandEmpty())
                             //    m_dealer.addLevel();
                             //else
-                            m_dealer.addScore();
+
+
+
                             //// 将玩家分数更新到主线程
                             //for (int i = 0; i < m_dealer.score.Length; i++)
                             //{
                             //    m_players[i].score = m_dealer.score[i];
                             //}
                         }
+
+
+                        // 必须保证首家 ID 已经确定了，才能更新下一出牌玩家 ID
+                        m_dealer.UpdateNextPlayer();
+
                         // 将分数同步到客户端
                         ComServer.Broadcast(m_dealer.score);
 
@@ -1716,7 +1800,7 @@ namespace server_0._0._1
         // 处理计分流程
         static void Score()
         {
-            // 更新玩家的级数；更新台上方
+            // 更新玩家的级数；更新台上方；注意要用到m_dealer.score
             m_dealer.addLevel();
             //for (int i = 0; i < m_dealer.playerLevels.Length; i++)
             //{
@@ -1725,7 +1809,6 @@ namespace server_0._0._1
             //}
             // 发送新级数到客户端
             ComServer.Broadcast(m_dealer.playerLevels);
-
         }
 
         // 将玩家信息统计之后更新到数据库服务器
@@ -1733,7 +1816,26 @@ namespace server_0._0._1
         {
             for (int i = 0; i < m_players.Count; i++)
             {
-                m_players[i].UpdateStat();
+                int playerindex = m_players.FindIndex(player => player.id == i);//第i个玩家的下标
+
+                //m_players[i].UpdateStat();
+                m_players[playerindex].UpdateStat(
+                                                    m_dealer.playerLevels[i],//玩家i的级数
+                                                    m_dealer.playerAddLevels[i],    // 玩家 i 的升级数
+                                                    m_dealer.BidTimes[i],//抢底次数
+                                                    m_dealer.fryTimes[i],//炒底次数
+                                                    m_dealer.buryTimes[i],//埋底次数
+                                                    m_dealer.buryScore[i],//埋底分数
+                                                    m_dealer.singleTimes[i],//单打次数
+                                                    m_dealer.findFriendTimes[i],
+                                                    m_dealer.bankerPlayerId[0] == i,  //当前玩家是否为庄家
+                                                    m_dealer.bottomSuccessID == i,  //当前玩家是否为抄底玩家
+                                                    m_dealer.bottomSuccessScore,//抄底分数
+                                                    Array.IndexOf(m_dealer.upperPlayersId, i) >= 0  // 是否为台上方
+                                                    ); 
+
+
+
                 StatObject statObj = new StatObject();
                 statObj.CopyFrom(m_players[i]);
                 // 更新数据到数据库服务器
@@ -1746,6 +1848,10 @@ namespace server_0._0._1
         /// </summary>
         static void Score2Deal()
         {
+#if (DATABASE)
+            // 将玩家信息统计之后更新到数据库服务器
+            UpdatePlayerStats();
+#endif
             // 过渡更新
             m_dealer.Score2Deal();
             // 清空玩家手牌
@@ -1753,10 +1859,7 @@ namespace server_0._0._1
             {
                 m_dealer.playersHandCard[i].Clear();
             }
-#if (DATABASE)
-            // 将玩家信息统计之后更新到数据库服务器
-            UpdatePlayerStats();
-#endif
+
             // 这里同步一下客户端的战绩；直接把玩家信息发送到客户端
             // 先发送玩家人数
             ComServer.Broadcast(m_players.Count);
@@ -1808,7 +1911,7 @@ namespace server_0._0._1
                 }
             }
             // 是否所有玩家都准备好
-            for(int i = 0; i < m_playerReadyStates.Length; i++)
+            for (int i = 0; i < m_playerReadyStates.Length; i++)
             {
                 if (!m_playerReadyStates[i])
                 {
@@ -1829,6 +1932,23 @@ namespace server_0._0._1
                 {
                     try
                     {
+                        // 这时候，虽然断线玩家已经在 ComServer 没有 copy 了，但是还没有同步到主线程
+                        // 此时必定还有断线玩家的信息
+
+                        // 首先构造玩家的昵称列表
+                        List<string> runPlayerNicknames = new List<string>();
+
+                        for (int i = 0; i < m_runPlayerNames.Count; i++)
+                        {
+                            runPlayerNicknames.Add(m_players.Find(player => player.username == m_runPlayerNames[i]).nickname);
+                        }
+
+                        // 首先告知客户端，逃跑玩家人数
+                        //ComServer.Broadcast(m_runPlayerNames.Count);
+                        // 将逃跑玩家的昵称发送到客户端
+                        ComServer.Broadcast(runPlayerNicknames.ToArray());
+
+
                         // 向所有玩家发送最新的游戏状态
                         ComServer.Broadcast(m_gameStateMachine.state);
 
@@ -1882,8 +2002,20 @@ namespace server_0._0._1
                                 // 不判断是否还有可以亮牌，以免泄漏信息
                                 if (isOkTouch)
                                 {
-                                    // 完成摸牌，准备进入最后抢底阶段
-                                    m_gameStateMachine.Update(GameStateMachine.Signal.DoneTouch);
+                                    // 如果有多于 1 个台上方
+                                    if (m_dealer.upperPlayersId.Length > 1)
+                                    {
+                                        // 完成摸牌，准备进入最后抢底阶段
+                                        m_gameStateMachine.Update(GameStateMachine.Signal.DoneTouch);
+                                    }
+                                    // 否则，如果只有 1 个台上方
+                                    else
+                                    {
+                                        // 直接进入埋底阶段
+                                        m_gameStateMachine.Update(GameStateMachine.Signal.SingleUpperPlayer);
+                                    }
+
+
                                 }
                                 //// 如果不可能有更高出价者
                                 //if (m_dealer.NoHigherBid())
@@ -2073,6 +2205,8 @@ namespace server_0._0._1
                                 if (m_dealer.round > m_gameRoundSetting)
                                 {
                                     m_gameStateMachine.Update(GameStateMachine.Signal.FinishRounds);
+                                    // 重置服务器
+                                    Reset();
                                 }
                                 // 还没有完成指定级数
                                 else
@@ -2106,6 +2240,8 @@ namespace server_0._0._1
                         //var line = frame.GetFileLineNumber();
 
                         //MyConsole.Log(string.Format("{0}行 - {1}", line, ex.Message));
+                        // 重置服务器
+                        Reset();
 
                     }
                     finally
@@ -2114,6 +2250,32 @@ namespace server_0._0._1
                     }
                     // 处理断线
                     ComServer.HandleDisconnect();
+
+
+                    // 向客户端广播其他玩家的逃跑消息
+                    // 首先广播逃跑的人数
+
+                    // copy 一份逃跑玩家用户名列表
+                    m_runPlayerNames = new List<string>(ComServer.abnormallyDisconnectedUserNames);
+
+                    // 处理逃跑；虽然 ComServer 里面已经去掉逃跑玩家的记录；但是主线程此时还没有同步，还保留逃跑玩家的记录
+                    while (ComServer.abnormallyDisconnectedUserNames.Count > 0)
+                    //for(int i = 0; i < ComServer.abnormallyDisconnectedUserNames.Count;)
+                    {
+                        // 获取逃跑玩家用户名
+                        string username = ComServer.abnormallyDisconnectedUserNames[0];
+                        // 获取当前逃跑次数
+                        int totalRunTimes = m_players.Find(player => player.username == username).totalRunTimes;
+                        // 更新数据库
+                        DBClient.Update(statTableName, username, "totalRunTimes", totalRunTimes + 1);
+                        // 获取当前积分
+                        int grades = m_players.Find(player => player.username == username).grades;
+                        // 扣 3 分更新到数据库
+                        DBClient.Update(statTableName, username, "grades", grades - 3);
+                        // 去掉网络部分的异常断线记录
+                        ComServer.abnormallyDisconnectedUserNames.RemoveAt(0);
+                    }
+
                     // 指示游戏主循环已经结束
                     m_doneGameLoopEvent.Set();
                 }

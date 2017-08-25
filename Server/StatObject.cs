@@ -114,6 +114,30 @@ namespace server_0._0._1
                 Set("totalBuryScores", value);
             }
         }
+        // 总埋底次数
+        public int totalBuryTimes
+        {
+            get
+            {
+                return (int)Get("totalBuryTimes");
+            }
+            set
+            {
+                Set("totalBuryTimes", value);
+            }
+        }
+        // 平均埋底分数
+        public float aveBuryScores
+        {
+            get
+            {
+                return (float)Get("aveBuryScores");
+            }
+            set
+            {
+                Set("aveBuryScores", value);
+            }
+        }
         // 游戏总局数
         public int totalRoundTimes
         {
@@ -136,6 +160,18 @@ namespace server_0._0._1
             set
             {
                 Set("totalSingleTimes", value);
+            }
+        }
+        // 总单打次数
+        public int totalFindFriendTimes
+        {
+            get
+            {
+                return (int)Get("totalFindFriendTimes");
+            }
+            set
+            {
+                Set("totalFindFriendTimes", value);
             }
         }
         // 总做庄次数
@@ -199,6 +235,55 @@ namespace server_0._0._1
             }
         }
 
+        // 总台上次数
+        public int totalUpperTimes
+        {
+            get
+            {
+                return (int)Get("totalUpperTimes");
+            }
+            set
+            {
+                Set("totalUpperTimes", value);
+            }
+        }
+        // 胜率；平均台上方次数
+        public float upperRate
+        {
+            get
+            {
+                return (float)Get("upperRate");
+            }
+            set
+            {
+                Set("upperRate", value);
+            }
+        }
+        // 积分；经验值
+        public int grades
+        {
+            get
+            {
+                return (int)Get("grades");
+            }
+            set
+            {
+                Set("grades", value);
+            }
+        }
+        // 等级
+        public int level
+        {
+            get
+            {
+                return (int)Get("level");
+            }
+            set
+            {
+                Set("level", value);
+            }
+        }
+
         public StatObject()
         {
             //variables.Add(new NamedVariable("score", "int"));
@@ -212,11 +297,18 @@ namespace server_0._0._1
             variables.Add(new NamedVariable("totalBuryScores", "int"));
             variables.Add(new NamedVariable("totalRoundTimes", "int"));
             variables.Add(new NamedVariable("totalSingleTimes", "int"));
+            variables.Add(new NamedVariable("totalFindFriendTimes", "int"));
             variables.Add(new NamedVariable("totalBankerTimes", "int"));
             variables.Add(new NamedVariable("totalBottomSuccessTimes", "int"));
             variables.Add(new NamedVariable("totalBottomScores", "int"));
             variables.Add(new NamedVariable("highBottomScores", "int"));
             variables.Add(new NamedVariable("totalRunTimes", "int"));
+            variables.Add(new NamedVariable("totalBuryTimes", "int"));
+            variables.Add(new NamedVariable("aveBuryScores", "float"));
+            variables.Add(new NamedVariable("totalUpperTimes", "int"));
+            variables.Add(new NamedVariable("upperRate", "float"));
+            variables.Add(new NamedVariable("grades", "int"));
+            variables.Add(new NamedVariable("level", "int"));
 
 
             highScore = 0;
@@ -229,12 +321,18 @@ namespace server_0._0._1
             totalBuryScores = 0;
             totalRoundTimes = 0;
             totalSingleTimes = 0;
+            totalFindFriendTimes = 0;
             totalBankerTimes = 0;
             totalBottomSuccessTimes = 0;
             totalBottomScores = 0;
             highBottomScores = 0;
             totalRunTimes = 0;
-
+            totalBuryTimes = 0;
+            aveBuryScores = 0.0f;
+            totalUpperTimes = 0;
+            upperRate = 0.0f;
+            grades = 0;
+            level = 1;
         }
 
         public StatObject(DataObject dataObj)
@@ -246,6 +344,8 @@ namespace server_0._0._1
 
         public void CopyTo(PlayerInfo info)
         {
+            info.username = username;
+
             info.highScore = highScore;
             info.totalScore = totalScore;
             info.highLevel = highLevel;
@@ -256,16 +356,26 @@ namespace server_0._0._1
             info.totalBuryScores = totalBuryScores;
             info.totalRoundTimes = totalRoundTimes;
             info.totalSingleTimes = totalSingleTimes;
+            info.totalFindFriendTimes = totalFindFriendTimes;
             info.totalBankerTimes = totalBankerTimes;
             info.totalBottomSuccessTimes = totalBottomSuccessTimes;
             info.totalBottomScores = totalBottomScores;
             info.highBottomScores = highBottomScores;
             info.totalRunTimes = totalRunTimes;
+            info.totalBuryTimes = totalBuryTimes;
+            info.aveBuryScores = aveBuryScores;
+            info.totalUpperTimes = totalUpperTimes;
+            info.upperRate = upperRate;
+            info.grades = grades;
+            info.level = level;
 
         }
 
         public void CopyFrom(PlayerInfo info)
         {
+            username = info.username;
+
+
             highScore = info.highScore;
             totalScore = info.totalScore;
             highLevel = info.highLevel;
@@ -276,11 +386,18 @@ namespace server_0._0._1
             totalBuryScores = info.totalBuryScores;
             totalRoundTimes = info.totalRoundTimes;
             totalSingleTimes = info.totalSingleTimes;
+            totalFindFriendTimes = info.totalFindFriendTimes;
             totalBankerTimes = info.totalBankerTimes;
             totalBottomSuccessTimes = info.totalBottomSuccessTimes;
             totalBottomScores = info.totalBottomScores;
             highBottomScores = info.highBottomScores;
             totalRunTimes = info.totalRunTimes;
+            totalBuryTimes = info.totalBuryTimes;
+            aveBuryScores = info.aveBuryScores;
+            totalUpperTimes = info.totalUpperTimes;
+            upperRate = info.upperRate;
+            grades = info.grades;
+            level = info.level;
 
         }
     }

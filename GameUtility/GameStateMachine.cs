@@ -58,6 +58,7 @@ namespace GameUtility
             NoHigherBid,     // 不可能有更高出价者, 抢底结束
             EndLastBid,     // 最后抢底阶段也已经结束
             NoBidder,   // 没有抢底的人
+            SingleUpperPlayer,      // 只有 1 个台上方
             DoneLastBid2BidBury,    // 完成最后抢底到埋底的过渡
             DoneBidBury,        // 庄家完成埋底
             DoneBid2Deal,       // 完成抢底到重新发牌的过渡阶段
@@ -122,6 +123,11 @@ namespace GameUtility
                     break;
                 case Signal.NoHigherBid:
                     m_state = State.LastBid2BidBury;
+                    break;
+                    // 如果只有 1 个台上方
+                case Signal.SingleUpperPlayer:
+                    // 直接进入埋底
+                    m_state = State.Touch2LastBid;
                     break;
                 case Signal.DoneLastBid2BidBury:
                     m_state = State.BidBury;

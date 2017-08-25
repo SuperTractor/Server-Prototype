@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Net;
 using System.Threading;
 using ConsoleUtility;
+using DBNetworking;
 
 namespace Networking
 {
@@ -103,6 +104,11 @@ namespace Networking
         // 存放游戏进程和断线处理进程
         static AutoResetEvent[] m_events = new AutoResetEvent[2];
 
+        //static string m_statTableName = "stat";
+
+        // 记录断线玩家的用户名；主线程会根据这个记录来修改逃跑次数
+        public static List<string> abnormallyDisconnectedUserNames = new List<string>();
+
         // 获取本机地址
         static IPAddress GetLocalAddress()
         {
@@ -125,6 +131,8 @@ namespace Networking
             }
             throw new Exception("没有找到 IP 地址");
         }
+
+
 
 
         /// <summary>
@@ -449,6 +457,48 @@ namespace Networking
                 Player player = m_players[i];
                 int id = player.id;
                 string name = player.name;
+
+                try
+                {
+                    // 询问该玩家是否主动断开连接
+                    bool wantDisconnect = (bool)Respond(id, "收到断线请求");
+                    // 如果该玩家主动断线
+                    if (wantDisconnect)
+                    {
+                        try
+                        {
+                            // 询问该客户端是否正常断线
+                            bool isNormal = (bool)Respond(id, "收到断线状态");
+                            // 如果不是正常断线
+                            if (!isNormal)
+                            {
+                                // 记名字
+                                abnormallyDisconnectedUserNames.Add(name);
+                            }
+                        }
+                        catch
+                        {
+                            // 断线了
+                            // 记名字
+                            abnormallyDisconnectedUserNames.Add(name);
+                        }
+
+                        // 终止对他的服务
+                        EndService(id);
+                        continue;
+                    }
+                }
+                catch
+                {
+                    // 有可能这里断线了
+                    // 终止对他的服务
+                    EndService(id);
+
+                    abnormallyDisconnectedUserNames.Add(name);
+
+                    continue;
+                }
+
                 // 如果这个用户掉线了
                 if (player.IsDisconnected())
                 {
@@ -456,6 +506,8 @@ namespace Networking
                     EndService(id);
                     // 向所有玩家发送此消息，channel 3 是紧急频道
                     //Broadcast(name, 3);
+                    abnormallyDisconnectedUserNames.Add(name);
+                    continue;
                 }
                 else
                 {

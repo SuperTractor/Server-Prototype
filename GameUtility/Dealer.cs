@@ -1,15 +1,15 @@
 ﻿// 各阶段规则的开关
-//#define RULE
-#undef RULE
+#define RULE
+//#undef RULE
 
 
 #if (RULE)
 // 发牌
 //#define DEAL
-#undef DEAL
+//#undef DEAL
 // 抢底
-//#define BID
-#undef BID
+#define BID
+//#undef BID
 
 // 调试抢底
 //#define DEBUG_BID_1
@@ -19,14 +19,18 @@
 #define FRY
 //#undef FRY
 // 找朋友
-//#define FINDFRIEND
-#undef FINDFRIEND
+#define FINDFRIEND
+//#undef FINDFRIEND
 // 对战
-//#define FIGHT
-#undef FIGHT
+#define FIGHT
+//#undef FIGHT
 // 升级
-//#define LEVEL
-#undef LEVEL
+#define LEVEL
+//#undef LEVEL
+// 积分
+#define SCORE
+//#undef SCORE
+
 #else
 // 发牌
 #undef DEAL
@@ -40,6 +44,9 @@
 #undef FIGHT
 // 升级
 #undef LEVEL
+// 积分
+#undef SCORE
+
 #endif
 
 
@@ -48,8 +55,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Collections;
-
-
 
 namespace GameUtility
 {
@@ -235,13 +240,16 @@ namespace GameUtility
                         if (i - thisColor * 13 != mainNumber)
                             if (init.data[i] > 0)
                             {
-                                int temp = i - 1;
-                                if (temp % 13 == mainNumber)
-                                    temp--;
-                                if (temp > 0 && init.data[temp] == 0 && flag)
+                                if (flag)
                                 {
-                                    thrown = true;
-                                    goto isThrown;
+                                    int temp = i - 1;
+                                    if (temp % 13 == mainNumber)
+                                        temp--;
+                                    if (temp > 0 && init.data[temp] == 0)
+                                    {
+                                        thrown = true;
+                                        goto isThrown;
+                                    }
                                 }
                                 data.Add(i);
                                 flag = true;
@@ -275,11 +283,14 @@ namespace GameUtility
                         if (i != mainColor && init.data[i * 13 + mainNumber] > 0)
                         {
                             viceOccurFlag = true;
-                            int temp = data[data.Count() - 1] % 13;
-                            if (flag && ((temp != 11 && mainNumber == 12) || (temp != 12 && mainNumber != 12)))
+                            if (flag)
                             {
-                                thrown = true;
-                                goto isThrown;
+                                int temp = data[data.Count() - 1] % 13;
+                                if ((temp != 11 && mainNumber == 12) || (temp != 12 && mainNumber != 12))
+                                {
+                                    thrown = true;
+                                    goto isThrown;
+                                }
                             }
                             data.Add(i * 13 + mainNumber);
                             count1++;
@@ -335,13 +346,16 @@ namespace GameUtility
                         if (i - thisColor * 13 != mainNumber)
                             if (init.data[i] > 0)
                             {
-                                int temp = i - 1;
-                                if (temp % 13 == mainNumber)
-                                    temp--;
-                                if (temp > 0 && init.data[temp] == 0 && flag)
+                                if (flag)
                                 {
-                                    thrown = true;
-                                    goto isThrown;
+                                    int temp = i - 1;
+                                    if (temp % 13 == mainNumber)
+                                        temp--;
+                                    if (temp > 0 && init.data[temp] == 0)
+                                    {
+                                        thrown = true;
+                                        goto isThrown;
+                                    }
                                 }
                                 data.Add(i);
                                 flag = true;
@@ -1019,6 +1033,13 @@ namespace GameUtility
         {
             data = new int[54];
         }
+        public
+            CardList(CardList res)
+        {
+            data = new int[54];
+            for (int i = 0; i < 54; i++)
+                data[i] = res.data[i];
+        }
         public int Count
         {
             get
@@ -1046,8 +1067,24 @@ namespace GameUtility
         // 玩家当前的手牌
         public List<Card>[] playersHandCard { get; set; }
 
-        // 玩家的级数
+        // 玩家的当前级数
         public int[] playerLevels { get; set; }
+        // 玩家的升级数
+        public int[] playerAddLevels = new int[playerNumber];
+        // 抢底次数
+        public int[] BidTimes;
+        // 炒底次数
+        public int[] fryTimes;
+        // 埋底次数
+        public int[] buryTimes;
+        // 埋底分数
+        public int[] buryScore;
+        // 选择单打次数
+        public int[] singleTimes;
+        // 选择找朋友次数
+        public int[] findFriendTimes;
+        public int bottomSuccessID;//抄底玩家
+        public int bottomSuccessScore;//抄底分数
 
         // 底牌接口
         public Card[] bottom
@@ -1098,6 +1135,36 @@ namespace GameUtility
             score = new int[4];
             for (int i = 0; i < 4; i++)
                 score[i] = 0;
+
+            BidTimes = new int[4];
+            for (int i = 0; i < 4; i++)
+                BidTimes[i] = 0;
+
+            fryTimes = new int[4];
+            for (int i = 0; i < 4; i++)
+                fryTimes[i] = 0;
+
+            buryTimes = new int[4];
+            for (int i = 0; i < 4; i++)
+                buryTimes[i] = 0;
+
+            buryScore = new int[4];
+            for (int i = 0; i < 4; i++)
+                buryScore[i] = 0;
+
+            singleTimes = new int[4];
+            for (int i = 0; i < 4; i++)
+                singleTimes[i] = 0;
+
+
+            findFriendTimes = new int[4];
+            for (int i = 0; i < 4; i++)
+                findFriendTimes[i] = 0;
+
+            bottomSuccessID = -1;
+            bottomSuccessScore = 0;
+
+            currentHasBidder = false;
 
             m_totalCard = new Card[Card.cardNumberOfOnePack * packNumber];
             for (int i = 0; i < packNumber; i++)
@@ -1159,7 +1226,7 @@ namespace GameUtility
             {
                 int thisId = (playerNumber + id - i) % playerNumber;
                 // 如果找到了上一个指定级数的台上方玩家
-                if (IsUpperPlayer(thisId) && playerLevels[thisId] == level)
+                if (IsUpperPlayer(thisId) && (playerLevels[thisId] - 1) % 13 == (level - 1) % 13)
                 {
                     return thisId;
                 }
@@ -1213,7 +1280,7 @@ namespace GameUtility
             m_bottom = new Card[bottomCardNumber];
             Array.Copy(cards, m_bottom, bottomCardNumber);
             // 从玩家的手牌去除埋牌
-            for(int i = 0; i < cards.Length;i++)
+            for (int i = 0; i < cards.Length; i++)
             {
                 playersHandCard[playerId].Remove(cards[i]);
             }
@@ -1290,6 +1357,8 @@ namespace GameUtility
         public List<Card> gotBottomShowCards;
         // 记录是否有玩家抢底的flag
         public bool hasBidder { get; set; }
+        //记录当前玩家是否抢了底
+        public bool currentHasBidder = false;
         // 记录 4 个玩家率先亮牌的顺序；bidOrder[0]=1 表示第一个亮牌的是玩家 id = 1
         public int[] bidOrder = new int[playerNumber];
         // 测试：抢底亮牌上限
@@ -1314,7 +1383,7 @@ namespace GameUtility
                 if (currentBidCards[playerId].Count == 0)
                 {
                     // 获取目前该玩家的摸牌当中，所有的级牌
-                    levelCards = playersHandCard[playerId].FindAll(card => card.points + 1 == playerLevels[playerId]);
+                    levelCards = playersHandCard[playerId].FindAll(card => card.points == (playerLevels[playerId] - 1) % 13);
 
                     for (int i = 0; i < levelCards.Count; i++)
                     {
@@ -1329,7 +1398,7 @@ namespace GameUtility
                 else// 如果该玩家已经亮了牌
                 {
                     // 获取该玩家目前所有的级牌，而且花色要和他已经亮过的牌一致
-                    levelCards = playersHandCard[playerId].FindAll(card => card.points + 1 == playerLevels[playerId] && card.suit == currentBidCards[playerId][0].suit);
+                    levelCards = playersHandCard[playerId].FindAll(card => card.points == (playerLevels[playerId] - 1) % 13 && card.suit == currentBidCards[playerId][0].suit);
 
                     // 姑且认为可以亮出此花色的牌
                     if (levelCards.Count > 0)
@@ -1385,7 +1454,7 @@ namespace GameUtility
                                     bidNeedNumber = maxBidNumber + 1 - currentBidCards[playerId].Count;
                                 }
                             }
-                            
+
                         }
                         // 否则如果之前没人亮牌
                         else
@@ -1491,7 +1560,7 @@ namespace GameUtility
             }
 
             // 构造一张级牌
-            Card levelCard = new Card(suit, playerLevels[playerId] - 1);
+            Card levelCard = new Card(suit, (playerLevels[playerId] - 1) % 13);
             for (int i = 0; i < bidNeedNumber; i++)
             {
                 // 找到级牌所在位置
@@ -1508,6 +1577,9 @@ namespace GameUtility
             gotBottomPlayerId = playerId;
             // 有人抢底了
             hasBidder = true;
+
+            // 统计抢底次数
+            BidTimes[playerId]++;
 #else
             // 测试：只要比最大亮牌数多就行
             int bidNeedNumber;
@@ -2234,7 +2306,7 @@ namespace GameUtility
                     if (isUpperPlayer)
                     {
                         // 如果亮出大王、小王或自己台上级主牌
-                        if (lastFryShowCard.points == 13 || lastFryShowCard.points + 1 == playerLevels[lastFryShowPlayerId])
+                        if (lastFryShowCard.points == 13 || lastFryShowCard.points == (playerLevels[lastFryShowPlayerId] - 1) % 13)
                         {
                             // 自己做庄
                             bankerPlayerId[0] = lastFryShowPlayerId;
@@ -2422,20 +2494,20 @@ namespace GameUtility
         }
 
         // 将指定玩家的手牌放到亮牌里去
-        public void ShowCards(int playerId,Card[] cards)
+        public void ShowCards(int playerId, Card[] cards)
         {
             showCards[playerId] = new List<Card>(cards);
 
             // 从手牌中去掉亮牌
-            for(int i = 0; i < cards.Length; i++)
+            for (int i = 0; i < cards.Length; i++)
             {
                 playersHandCard[playerId].Remove(cards[i]);
             }
         }
 
-#endregion
+        #endregion
 
-#region FINDFRIEND
+        #region FINDFRIEND
 
         // 生成信号牌
         // 随机抽一张非硬主的牌
@@ -2450,7 +2522,7 @@ namespace GameUtility
             // 其次，不能抽点数是台上方玩家级数的牌
             for (int i = 0; i < m_upperPlayersId.Length; i++)
             {
-                cardSet.RemoveAll(card => card.points == playerLevels[m_upperPlayersId[i]]);
+                cardSet.RemoveAll(card => card.points == (playerLevels[m_upperPlayersId[i]] - 1) % 13);
             }
             // 然后随机抽
             Random rdn = new Random();
@@ -2466,9 +2538,9 @@ namespace GameUtility
             signCard = cardSet[idx];
 #endif
         }
-#endregion
+        #endregion
 
-#region FIGHT
+        #region FIGHT
         // 庄家是否单打
         public bool bankerIsFightAlone;
         // 信号牌
@@ -2496,6 +2568,8 @@ namespace GameUtility
         }
         // 4 个玩家本轮的出牌
         public List<Card>[] handOutCards;
+        // 存储上轮的出牌；用来升级
+        public List<Card>[] handOutCardsHistory;
         // 当前出牌最大玩家
         public int biggestPlayerId;
         // 当前每个玩家的分数
@@ -2531,7 +2605,7 @@ namespace GameUtility
         }
 
         // CardArray到CardList的转换
-        CardList CardArrayToCardList(Card[] res)
+        public CardList CardArrayToCardList(Card[] res)
         {
             CardList tmp = new CardList();
             foreach (Card j in res)
@@ -3234,9 +3308,7 @@ namespace GameUtility
             cardComb fc = new cardComb(firstCard, mainNumber, mainColor);
 
             if (!fc.valid)
-            {
                 return new Judgement("invalid", false);
-            }
             if (!fc.thrown)
                 return new Judgement("valid", true);
             else //甩牌咯
@@ -3257,8 +3329,12 @@ namespace GameUtility
         /// <param name="handCard">当前玩家手牌</param>
         /// <returns>0 代表不可出，1 代表可出不压制，2 代表可出压制</returns>
         public
-          int orderCompare(CardList firstCard, CardList playCard, CardList handCard)
+          int orderCompare(CardList fC, CardList pC, CardList hC)
         {
+            CardList firstCard = new CardList(fC);
+            CardList playCard = new CardList(pC);
+            CardList handCard = new CardList(hC);
+
             cardComb fc = new cardComb(firstCard, mainNumber, mainColor),
                 pc = new cardComb(playCard, mainNumber, mainColor);
 
@@ -3642,12 +3718,416 @@ namespace GameUtility
                     int maxFirst = -1, maxPlay = -1;
 
                     for (int i = 0; i < 54; i++)
+                    {
                         if (playCard.data[i] == firstSame && biggerThan(i, maxPlay, mainColor, mainNumber))
                             maxPlay = i;
+                        if (firstCard.data[i] >= 2 && biggerThan(i, maxFirst, mainColor, mainNumber))
+                            maxFirst = i;
+                    }
 
-                    //强制出牌但未出者return0；出主牌压制者retur 2；手牌中没有与firstcard完全整齐牌state=1；更新firstcard中的最大牌
-                    for (int i = 0; i < 54; i++)
+                    //四同、三同先看是否存在连续的对应
+                    if (firstType == 4 || firstType == 3)
                     {
+                        int s = firstSame;
+                        int firstLength = fc.data.Count;
+                        int maxh = 0, maxhmax = -1; // Hand 手中最长连续长度maxh与起始点maxhmax
+                        int maxp = 0, maxpmax = -1; // Play 打出的最长连续长度maxp与起始点maxpmax
+
+                        // 在手牌中寻找
+                        if (mainColor == 4)//无主
+                        {
+                            if (firstColor == mainColor)//主牌
+                            {
+                                // 在handCard中寻找最大匹配长度
+                                int ctn = 0;                                                                                        // ctn连续计数
+                                int[] l = new int[] { mainNumber, 13 + mainNumber, 2 * 13 + mainNumber, 3 * 13 + mainNumber, 52, 53 }; // 要考虑的牌
+                                for (int i = 0; i < 4; i++)
+                                {
+                                    if (handCard.data[l[i]] >= s)
+                                        ctn++;
+                                    if (ctn > maxh)
+                                    {
+                                        maxh = ctn;
+                                        maxhmax = l[i];
+                                    }
+                                }
+                                for (int i = 4; i < l.Length; i++)
+                                {
+                                    if (handCard.data[l[i]] >= s)
+                                        ctn++;
+                                    else
+                                        ctn = 0;
+                                    if (ctn > maxh)
+                                    {
+                                        maxh = ctn;
+                                        maxhmax = l[i];
+                                    }
+                                }
+
+                                // 若现有连续长度超过首家出牌长度
+                                if (maxh > fc.Count / s)
+                                    maxh = fc.Count / s;
+
+                                // 在playCard寻找相应匹配
+                                ctn = 0; // ctn连续计数
+                                for (int i = 0; i < 4; i++)
+                                {
+                                    if (playCard.data[l[i]] >= s)
+                                        ctn++;
+                                    if (ctn > maxp)
+                                    {
+                                        maxp = ctn;
+                                        maxpmax = l[i];
+                                    }
+                                }
+                                for (int i = 4; i < l.Length; i++)
+                                {
+                                    if (playCard.data[l[i]] >= s)
+                                        ctn++;
+                                    else
+                                        ctn = 0;
+                                    if (ctn > maxp)
+                                    {
+                                        maxp = ctn;
+                                        maxpmax = l[i];
+                                    }
+                                }
+
+                                //强制出牌
+                                if (maxp == maxh) // 连续配足了长度
+                                {
+                                    // 不需垫牌
+                                    if (maxp == fc.Count / s)
+                                    {
+                                        if (biggerThan(maxpmax, maxFirst, mainColor, mainNumber))
+                                            return 2;
+                                        else
+                                            return 1;
+                                    }
+                                    else // 不能压制
+                                        state = 1;
+                                }
+                                else
+                                    return 0; //  连续没配足长度
+                            }
+                            else // 首家出副牌
+                            {
+                                // 检查手牌的副牌段
+                                int ctn = 0;
+                                bool viceOccur = false;
+                                for (int i = 0; i < 13; i++)
+                                    if (i != mainNumber)
+                                    {
+                                        if (handCard.data[i + firstColor * 13] > 0)
+                                            viceOccur = true;
+                                        if (handCard.data[i + firstColor * 13] >= s)
+                                            ctn++;
+                                        else
+                                            ctn = 0;
+                                        if (ctn > maxh)
+                                        {
+                                            maxh = ctn;
+                                            maxhmax = i + firstColor * 13;
+                                        }
+                                    }
+
+                                if (viceOccur) // 手牌有副牌
+                                {
+                                    if (maxh >= fc.Count / s)
+                                        maxh = fc.Count / s;
+
+                                    // 检查出牌的副牌段
+                                    for (int i = 0; i < 13; i++)
+                                        if (i != mainNumber)
+                                        {
+                                            if (playCard.data[i + firstColor * 13] > 0)
+                                                viceOccur = true;
+                                            if (playCard.data[i + firstColor * 13] >= s)
+                                                ctn++;
+                                            else
+                                                ctn = 0;
+                                            if (ctn > maxp)
+                                            {
+                                                maxp = ctn;
+                                                maxpmax = i + firstColor * 13;
+                                            }
+                                        }
+
+                                    if (maxp == maxh) // 是否配足连续
+                                    {
+                                        if (maxp == fc.Count / s) // 不用垫牌
+                                        {
+                                            if (biggerThan(maxpmax, maxFirst, mainColor, mainNumber))
+                                                return 2;
+                                            else
+                                                return 1;
+                                        }
+                                        else
+                                            state = 1;
+                                    }
+                                    else
+                                        return 0;
+                                }
+                                else // 手牌没有副牌，看是否用主牌压制，否则返回1
+                                {
+                                    ctn = 0; // ctn连续计数
+                                    for (int i = 0; i < 4; i++)
+                                    {
+                                        if (playCard.data[i * 13 + mainNumber] >= s)
+                                            ctn++;
+                                        if (ctn > maxp)
+                                        {
+                                            maxp = ctn;
+                                            maxpmax = i * 13 + mainNumber;
+                                        }
+                                    }
+                                    for (int i = 52; i < 53; i++)
+                                    {
+                                        if (playCard.data[i] >= s)
+                                            ctn++;
+                                        else
+                                            ctn = 0;
+                                        if (ctn > maxp)
+                                        {
+                                            maxp = ctn;
+                                            maxpmax = i;
+                                        }
+                                    }
+
+                                    if (maxp == fc.Count / s)
+                                        return 2;
+                                    else
+                                        return 1;
+                                }
+                            }
+                        }
+                        else // 打有主
+                        {
+                            if (firstColor == mainColor)
+                            {
+                                // 在handCard中寻找最大匹配长度
+                                int i;
+                                int ctn = 0; // ctn连续计数
+                                for (i = 0; i < 13; i++)
+                                    if (i != mainNumber)
+                                    {
+                                        if (handCard.data[i + mainColor * 13] >= s)
+                                            ctn++;
+                                        else
+                                            ctn = 0;
+                                        if (ctn > maxh)
+                                        {
+                                            maxh = ctn;
+                                            maxhmax = i + mainColor * 13;
+                                        }
+                                    }
+                                bool flag = true;
+                                for (i = 0; i < 4; i++)
+                                    if (handCard.data[i * 13 + mainNumber] >= s)
+                                    {
+                                        ctn++;
+                                        flag = false;
+                                        break;
+                                    }
+                                if (flag)
+                                    ctn = 0;
+                                if (ctn > maxh)
+                                {
+                                    maxh = ctn;
+                                    maxhmax = i * 13 + mainNumber;
+                                }
+                                for (i = 52; i < 54; i++)
+                                {
+                                    if (handCard.data[i] >= s)
+                                        ctn++;
+                                    else
+                                        ctn = 0;
+                                    if (ctn > maxh)
+                                    {
+                                        maxh = ctn;
+                                        maxhmax = i;
+                                    }
+                                }
+
+                                // 在playCard寻找相应匹配
+                                ctn = 0; // ctn连续计数
+                                for (i = 0; i < 13; i++)
+                                    if (i != mainNumber)
+                                    {
+                                        if (playCard.data[i + mainColor * 13] >= s)
+                                            ctn++;
+                                        else
+                                            ctn = 0;
+                                        if (ctn > maxp)
+                                        {
+                                            maxp = ctn;
+                                            maxpmax = i + mainColor * 13;
+                                        }
+                                    }
+                                flag = true;
+                                for (i = 0; i < 4; i++)
+                                    if (playCard.data[i * 13 + mainNumber] >= s)
+                                    {
+                                        ctn++;
+                                        flag = false;
+                                        break;
+                                    }
+                                if (flag)
+                                    ctn = 0;
+                                if (ctn > maxp)
+                                {
+                                    maxp = ctn;
+                                    maxpmax = i * 13 + mainNumber;
+                                }
+                                for (i = 52; i < 54; i++)
+                                {
+                                    if (playCard.data[i] >= s)
+                                        ctn++;
+                                    else
+                                        ctn = 0;
+                                    if (ctn > maxp)
+                                    {
+                                        maxp = ctn;
+                                        maxpmax = i;
+                                    }
+                                }
+
+                                // 若现有连续长度超过首家出牌长度
+                                if (maxh > fc.Count / s)
+                                    maxh = fc.Count / s;
+
+                                if (maxp == maxh) // 连续配足了长度
+                                {
+                                    // 不需垫牌
+                                    if (maxp == fc.Count / s)
+                                    {
+                                        if (biggerThan(maxpmax, maxFirst, mainColor, mainNumber))
+                                            return 2;
+                                        else
+                                            return 1;
+                                    }
+                                    else
+                                        state = 1;
+                                }
+                                else
+                                    return 0; // 连续没配足长度
+                            }
+                            else // 首家出副牌
+                            {
+                                // 检查手牌的副牌段
+                                int ctn = 0;
+                                bool viceOccur = false;
+                                for (int i = 0; i < 13; i++)
+                                    if (i != mainNumber)
+                                    {
+                                        if (handCard.data[i + firstColor * 13] > 0)
+                                            viceOccur = true;
+                                        if (handCard.data[i + firstColor * 13] >= s)
+                                            ctn++;
+                                        else
+                                            ctn = 0;
+                                        if (ctn > maxh)
+                                        {
+                                            maxh = ctn;
+                                            maxhmax = i + firstColor * 13;
+                                        }
+                                    }
+
+                                if (viceOccur) // 手牌有副牌
+                                {
+                                    if (maxh >= fc.Count / s)
+                                        maxh = fc.Count / s;
+
+                                    // 检查出牌的副牌段
+                                    for (int i = 0; i < 13; i++)
+                                        if (i != mainNumber)
+                                        {
+                                            if (playCard.data[i + firstColor * 13] > 0)
+                                                viceOccur = true;
+                                            if (playCard.data[i + firstColor * 13] >= s)
+                                                ctn++;
+                                            else
+                                                ctn = 0;
+                                            if (ctn > maxp)
+                                            {
+                                                maxp = ctn;
+                                                maxpmax = i + firstColor * 13;
+                                            }
+                                        }
+
+                                    if (maxp == maxh) // 是否配连续
+                                    {
+                                        if (maxp == fc.Count / s) // 不用垫牌
+                                        {
+                                            if (biggerThan(maxpmax, maxFirst, mainColor, mainNumber))
+                                                return 2;
+                                            else
+                                                return 1;
+                                        }
+                                        else
+                                            state = 1;
+                                    }
+                                    else
+                                        return 0;
+                                }
+                                else // 手牌没有副牌，看是否用主牌压制，否则返回1
+                                {
+                                    ctn = 0; // ctn连续计数
+                                    int i;
+                                    for (i = 0; i < 13; i++)
+                                        if (i != mainNumber)
+                                        {
+                                            if (playCard.data[i + mainColor * 13] >= s)
+                                                ctn++;
+                                            else
+                                                ctn = 0;
+                                            if (ctn > maxp)
+                                            {
+                                                maxp = ctn;
+                                                maxpmax = i;
+                                            }
+                                        }
+                                    bool flag = true;
+                                    for (i = 0; i < 4; i++)
+                                        if (playCard.data[i * 13 + mainNumber] >= s)
+                                        {
+                                            ctn++;
+                                            flag = false;
+                                            break;
+                                        }
+                                    if (flag)
+                                        ctn = 0;
+                                    if (ctn > maxp)
+                                    {
+                                        maxp = ctn;
+                                        maxpmax = i * 13 + mainNumber;
+                                    }
+                                    for (i = 52; i < 54; i++)
+                                    {
+                                        if (playCard.data[i] >= s)
+                                            ctn++;
+                                        else
+                                            ctn = 0;
+                                        if (ctn > maxp)
+                                        {
+                                            maxp = ctn;
+                                            maxpmax = i;
+                                        }
+                                    }
+
+                                    if (maxp == fc.Count / s)
+                                        return 2;
+                                    else
+                                        return 1;
+                                }
+                            }
+                        }
+                    }
+
+
+                    //强制出牌但未出者return0；出主牌压制者return 2；手牌中没有与firstcard完全整齐牌state=1；更新firstcard中的最大牌
+                    int ac = 0; // 已匹配的牌数
+                    for (int i = 0; i < 54; i++)
                         if (firstCard.data[i] == firstSame)
                         {
                             // 在playCard与handCard中寻找匹配
@@ -3689,6 +4169,7 @@ namespace GameUtility
                                         if (playCard.data[k * 13 + mainNumber] >= sameLevel)
                                         {
                                             playCard.data[k * 13 + mainNumber] -= sameLevel;
+                                            ac += sameLevel;
                                             flag = true;
                                             break;
                                         }
@@ -3697,6 +4178,7 @@ namespace GameUtility
                                             if (playCard.data[k] >= sameLevel)
                                             {
                                                 playCard.data[k] -= sameLevel;
+                                                ac += sameLevel;
                                                 flag = true;
                                                 break;
                                             }
@@ -3715,7 +4197,7 @@ namespace GameUtility
                                     for (int j = firstSame; j >= 1; j--) // 降阶
                                         if (sameLevel == -1)
                                             for (int k = firstColor * 13; k < (firstColor + 1) * 13; k++)
-                                                if (handCard.data[k] >= j && k != mainNumber)
+                                                if (handCard.data[k] >= j && (k % 13) != mainNumber)
                                                 {
                                                     sameLevel = j;
                                                     handCard.data[k] -= j;
@@ -3733,9 +4215,10 @@ namespace GameUtility
                                     {
                                         bool flag = false;
                                         for (int k = firstColor * 13; k < (firstColor + 1) * 13; k++)
-                                            if (playCard.data[k] >= sameLevel && k != mainNumber)
+                                            if (playCard.data[k] >= sameLevel && (k & 13) != mainNumber)
                                             {
                                                 playCard.data[k] -= sameLevel;
+                                                ac += sameLevel;
                                                 flag = true;
                                                 break;
                                             }
@@ -3759,7 +4242,7 @@ namespace GameUtility
                                     {
                                         if (sameLevel == -1)
                                             for (int k = firstColor * 13; k < (firstColor + 1) * 13; k++)
-                                                if (handCard.data[k] >= j && k != mainNumber)
+                                                if (handCard.data[k] >= j && (k % 13) != mainNumber)
                                                 {
                                                     sameLevel = j;
                                                     handCard.data[k] -= j;
@@ -3793,9 +4276,10 @@ namespace GameUtility
                                     // 在playCard中寻找同样匹配级别的
                                     bool flag = false;
                                     for (int k = firstColor * 13; k < (firstColor + 1) * 13; k++)
-                                        if (playCard.data[k] >= sameLevel && k != mainNumber)
+                                        if (playCard.data[k] >= sameLevel && (k % 13) != mainNumber)
                                         {
                                             playCard.data[k] -= sameLevel;
+                                            ac += sameLevel;
                                             flag = true;
                                             break;
                                         }
@@ -3804,6 +4288,7 @@ namespace GameUtility
                                             if (playCard.data[k * 13 + mainNumber] >= sameLevel)
                                             {
                                                 playCard.data[k * 13 + mainNumber] -= sameLevel;
+                                                ac += sameLevel;
                                                 flag = true;
                                                 break;
                                             }
@@ -3812,6 +4297,7 @@ namespace GameUtility
                                             if (playCard.data[k] >= sameLevel)
                                             {
                                                 playCard.data[k] -= sameLevel;
+                                                ac += sameLevel;
                                                 flag = true;
                                                 break;
                                             }
@@ -3830,7 +4316,7 @@ namespace GameUtility
                                     for (int j = firstSame; j >= 1; j--) // 降阶
                                         if (sameLevel == -1)
                                             for (int k = firstColor * 13; k < (firstColor + 1) * 13; k++)
-                                                if (handCard.data[k] >= j && k != mainNumber)
+                                                if (handCard.data[k] >= j && (k % 13) != mainNumber)
                                                 {
                                                     sameLevel = j;
                                                     handCard.data[k] -= j;
@@ -3849,9 +4335,10 @@ namespace GameUtility
                                     {
                                         bool flag = false;
                                         for (int k = firstColor * 13; k < (firstColor + 1) * 13; k++)
-                                            if (playCard.data[k] >= sameLevel && k != mainNumber)
+                                            if (playCard.data[k] >= sameLevel && (k % 13) != mainNumber)
                                             {
                                                 playCard.data[k] -= sameLevel;
+                                                ac += sameLevel;
                                                 flag = true;
                                                 break;
                                             }
@@ -3865,18 +4352,86 @@ namespace GameUtility
                                     }
                                 }
                             }
-
-                            // 更新最大
-                            if (biggerThan(i, maxFirst, mainColor, mainNumber))
-                                maxFirst = i;
                         }
-                    }
 
                     //playcard最大牌比firstcard最大牌小，state=1
-                    if (biggerThan(maxFirst, maxPlay, mainColor, mainNumber))
+                    if (!biggerThan(maxPlay, maxFirst, mainColor, mainNumber))
                     {
                         state = 1;
                     }
+
+                    // 剩下是否补足
+                    if (ac < fc.Count)
+                    {
+                        int tmp1 = 0, tmp2 = 0;
+                        if (mainColor == 4)
+                        {
+                            if (firstColor == 4)
+                            {
+                                for (int k = 0; k < 4; k++)
+                                {
+                                    tmp1 += handCard.data[k * 13 + mainNumber];
+                                    tmp2 += playCard.data[k * 13 + mainNumber];
+                                }
+                                for (int k = 52; k <= 53; k++)
+                                {
+                                    tmp1 += handCard.data[k];
+                                    tmp2 += playCard.data[k];
+                                }
+                            }
+                            else // 首家出副牌
+                            {
+                                for (int k = firstColor * 13; k < (firstColor + 1) * 13; k++)
+                                    if ((k % 13) != mainNumber)
+                                    {
+                                        tmp1 += handCard.data[k];
+                                        tmp2 += playCard.data[k];
+                                    }
+                            }
+                        }
+
+                        else // 打有主
+                        {
+                            if (firstColor == mainColor)
+                            {
+
+                                for (int k = firstColor * 13; k < (firstColor + 1) * 13; k++)
+                                    if ((k % 13) != mainNumber)
+                                    {
+                                        tmp1 += handCard.data[k];
+                                        tmp2 += playCard.data[k];
+                                    }
+                                for (int k = 0; k < 4; k++)
+                                {
+                                    tmp1 += handCard.data[k * 13 + mainNumber];
+                                    tmp2 += playCard.data[k * 13 + mainNumber];
+                                }
+                                for (int k = 52; k <= 53; k++)
+                                {
+                                    tmp1 += handCard.data[k];
+                                    tmp2 += playCard.data[k];
+                                }
+                            }
+
+                            else // 首家出副牌
+                            {
+                                for (int k = firstColor * 13; k < (firstColor + 1) * 13; k++)
+                                    if ((k % 13) != mainNumber)
+                                    {
+                                        tmp1 += handCard.data[k];
+                                        tmp2 += playCard.data[k];
+                                    }
+                            }
+                        }
+
+                        if (tmp1 > fc.Count - ac)
+                            tmp1 = fc.Count - ac;
+                        if (tmp2 == tmp1)
+                            return 1;
+                        else
+                            return 0;
+                    }
+
                 }
 
                 // 拖拉机
@@ -3987,12 +4542,10 @@ namespace GameUtility
                             for (int i = 0; i < 13; i++)
                                 if (i != mainNumber)
                                 {
+                                    if (handCard.data[i + firstColor * 13] > 0)
+                                        viceOccur = true;
                                     if (handCard.data[i + firstColor * 13] >= 2)
-                                    {
-                                        if (handCard.data[i + firstColor * 13] > 0)
-                                            viceOccur = true;
                                         ctn++;
-                                    }
                                     else
                                         ctn = 0;
                                     if (ctn > maxh)
@@ -4011,12 +4564,10 @@ namespace GameUtility
                                 for (int i = 0; i < 13; i++)
                                     if (i != mainNumber)
                                     {
+                                        if (playCard.data[i + firstColor * 13] > 0)
+                                            viceOccur = true;
                                         if (playCard.data[i + firstColor * 13] >= 2)
-                                        {
-                                            if (playCard.data[i + firstColor * 13] > 0)
-                                                viceOccur = true;
                                             ctn++;
-                                        }
                                         else
                                             ctn = 0;
                                         if (ctn > maxp)
@@ -4108,7 +4659,7 @@ namespace GameUtility
                                 }
                             bool flag = true;
                             for (i = 0; i < 4; i++)
-                                if (handCard.data[i * mainColor + mainNumber] >= 2)
+                                if (handCard.data[i * 13 + mainNumber] >= 2)
                                 {
                                     ctn++;
                                     flag = false;
@@ -4119,7 +4670,7 @@ namespace GameUtility
                             if (ctn > maxh)
                             {
                                 maxh = ctn;
-                                maxhmax = i * mainColor + mainNumber;
+                                maxhmax = i * 13 + mainNumber;
                             }
                             for (i = 52; i < 54; i++)
                             {
@@ -4151,7 +4702,7 @@ namespace GameUtility
                                 }
                             flag = true;
                             for (i = 0; i < 4; i++)
-                                if (playCard.data[i * mainColor + mainNumber] >= 2)
+                                if (playCard.data[i * 13 + mainNumber] >= 2)
                                 {
                                     ctn++;
                                     flag = false;
@@ -4162,7 +4713,7 @@ namespace GameUtility
                             if (ctn > maxp)
                             {
                                 maxp = ctn;
-                                maxpmax = i * mainColor + mainNumber;
+                                maxpmax = i * 13 + mainNumber;
                             }
                             for (i = 52; i < 54; i++)
                             {
@@ -4208,7 +4759,7 @@ namespace GameUtility
                                     tmp1 += handCard.data[i];
                                     tmp2 += playCard.data[i];
                                 }
-                                if (tmp1 > fc.Count)
+                                if (tmp1 >= fc.Count)
                                     tmp1 = fc.Count;
                                 if (tmp1 == tmp2)
                                     return 1;
@@ -4226,12 +4777,10 @@ namespace GameUtility
                             for (int i = 0; i < 13; i++)
                                 if (i != mainNumber)
                                 {
+                                    if (handCard.data[i + firstColor * 13] > 0)
+                                        viceOccur = true;
                                     if (handCard.data[i + firstColor * 13] >= 2)
-                                    {
-                                        if (handCard.data[i + firstColor * 13] > 0)
-                                            viceOccur = true;
                                         ctn++;
-                                    }
                                     else
                                         ctn = 0;
                                     if (ctn > maxh)
@@ -4250,12 +4799,10 @@ namespace GameUtility
                                 for (int i = 0; i < 13; i++)
                                     if (i != mainNumber)
                                     {
+                                        if (playCard.data[i + firstColor * 13] > 0)
+                                            viceOccur = true;
                                         if (playCard.data[i + firstColor * 13] >= 2)
-                                        {
-                                            if (playCard.data[i + firstColor * 13] > 0)
-                                                viceOccur = true;
                                             ctn++;
-                                        }
                                         else
                                             ctn = 0;
                                         if (ctn > maxp)
@@ -4279,8 +4826,8 @@ namespace GameUtility
                                     for (int i = 0; i < 13; i++)
                                         if (i != mainNumber)
                                         {
-                                            tmp1 += handCard.data[i];
-                                            tmp2 += playCard.data[i];
+                                            tmp1 += handCard.data[i + firstColor * 13];
+                                            tmp2 += playCard.data[i + firstColor * 13];
                                         }
                                     if (tmp1 >= fc.Count)
                                         tmp1 = fc.Count;
@@ -4311,7 +4858,7 @@ namespace GameUtility
                                     }
                                 bool flag = true;
                                 for (i = 0; i < 4; i++)
-                                    if (playCard.data[i * mainColor + mainNumber] >= 2)
+                                    if (playCard.data[i * 13 + mainNumber] >= 2)
                                     {
                                         ctn++;
                                         flag = false;
@@ -4322,7 +4869,7 @@ namespace GameUtility
                                 if (ctn > maxp)
                                 {
                                     maxp = ctn;
-                                    maxpmax = i;
+                                    maxpmax = i * 13 + mainNumber;
                                 }
                                 for (i = 52; i < 54; i++)
                                 {
@@ -4373,7 +4920,10 @@ namespace GameUtility
                     if (orderCompare(ListCardToCardList(handOutCards[biggestPlayerId]), playCard, handCard) <= 1)
                         return new Judgement("notShot", true);
                     else
+                    {
+                        biggestPlayerId = currentPlayerId;
                         return new Judgement("shot", true);
+                    }
             }
             return new Judgement("placeholder", true);
         }
@@ -4425,7 +4975,6 @@ namespace GameUtility
             }
             return true;
         }
-
 
         // 更新台上方玩家
         public void UpdateUpperPlayers()
@@ -4520,8 +5069,11 @@ namespace GameUtility
 
         public void ClearHandOutCards()
         {
+            handOutCardsHistory = new List<Card>[playerNumber];
+
             for (int i = 0; i < playerNumber; i++)
             {
+                handOutCardsHistory[i] = new List<Card>(handOutCards[i]);
                 handOutCards[i].Clear();
             }
         }
@@ -4576,21 +5128,21 @@ namespace GameUtility
         }
 
         // 将选牌从玩家手牌去除加到出牌里
-        public void HandOut(int playerId,Card[] cards)
+        public void HandOut(int playerId, Card[] cards)
         {
             // 更新出牌
             handOutCards[playerId].Clear();
             handOutCards[playerId].AddRange(cards);
             // 更新手牌
-            for(int i = 0; i < cards.Length; i++)
+            for (int i = 0; i < cards.Length; i++)
             {
                 playersHandCard[playerId].Remove(cards[i]);
             }
         }
 
-#endregion
+        #endregion
 
-#region SCORE
+        #region SCORE
         /// <summary>
         /// 计算每圈后的得分
         /// </summary>
@@ -4600,7 +5152,7 @@ namespace GameUtility
         /// <returns></returns>
         public void addScore()
         {
-#if (FIGHT)
+#if (SCORE)
             for (int i = 0; i < 4; i++)
                 score[biggestPlayerId] += countScore(ListCardToCardList(handOutCards[i]));
 #else
@@ -4631,7 +5183,8 @@ namespace GameUtility
         public void addLevel()
         {
 #if (LEVEL)
-            CardList maxCard = ListCardToCardList(handOutCards[biggestPlayerId]);
+            playerAddLevels = new int[playerNumber];
+            CardList maxCard = ListCardToCardList(handOutCardsHistory[biggestPlayerId]);
             //判断底牌分是否有效，并确定分数翻倍倍数
             int bottomscore = countScore(CardArrayToCardList(bottom));
             int totalscore = 0;   //闲家分数总和
@@ -4642,6 +5195,12 @@ namespace GameUtility
                     totalscore += score[i];
                 }
             }
+
+            // 记录抄底分数
+            bottomSuccessScore = totalscore;
+
+            // 设置抄底玩家
+            bottomSuccessID = biggestPlayerId;
 
             cardComb maxcomb = new cardComb(maxCard, mainNumber, mainColor);
             List<int> tempupper = new List<int>();//暂时存储新台上方
@@ -4663,6 +5222,7 @@ namespace GameUtility
                     for (int i = 0; i < 4; i++)
                         if (bankerPlayerId.Exists((int x) => x == i ? true : false) == false)
                         {
+                            playerAddLevels[i] += rank;
                             playerLevels[i] += rank;
                             tempupper.Add(i);
                         }
@@ -4673,6 +5233,7 @@ namespace GameUtility
                     for (int i = 0; i < 4; i++)
                         if (bankerPlayerId.Exists((int x) => x == i ? true : false) == true)
                         {
+                            playerAddLevels[i] += rank;
                             playerLevels[i] += rank;
                             tempupper.Add(i);
                         }
@@ -4689,6 +5250,7 @@ namespace GameUtility
                     for (int i = 0; i < 4; i++)
                         if (bankerPlayerId.Exists((int x) => x == i ? true : false) == true)
                         {
+                            playerAddLevels[i] += 4;
                             playerLevels[i] += 4;
                             tempupper.Add(i);
                         }
@@ -4698,6 +5260,7 @@ namespace GameUtility
                     for (int i = 0; i < 4; i++)
                         if (bankerPlayerId.Exists((int x) => x == i ? true : false) == true)
                         {
+                            playerAddLevels[i] += 2;
                             playerLevels[i] += 2;
                             tempupper.Add(i);
                         }
@@ -4707,6 +5270,7 @@ namespace GameUtility
                     for (int i = 0; i < 4; i++)
                         if (bankerPlayerId.Exists((int x) => x == i ? true : false) == true)
                         {
+                            playerAddLevels[i] += 1;
                             playerLevels[i] += 1;
                             tempupper.Add(i);
                         }
@@ -4724,6 +5288,7 @@ namespace GameUtility
                     for (int i = 0; i < 4; i++)
                         if (bankerPlayerId.Exists((int x) => x == i ? true : false) == false)
                         {
+                            playerAddLevels[i] += 1;
                             playerLevels[i] += 1;
                             tempupper.Add(i);
                         }
@@ -4733,6 +5298,7 @@ namespace GameUtility
                     for (int i = 0; i < 4; i++)
                         if (bankerPlayerId.Exists((int x) => x == i ? true : false) == false)
                         {
+                            playerAddLevels[i] += 2;
                             playerLevels[i] += 2;
                             tempupper.Add(i);
                         }
@@ -4742,12 +5308,15 @@ namespace GameUtility
                     for (int i = 0; i < 4; i++)
                         if (bankerPlayerId.Exists((int x) => x == i ? true : false) == false)
                         {
+                            playerAddLevels[i] += 4;
                             playerLevels[i] += 4;
                             tempupper.Add(i);
                         }
                 }
 
             }
+            // 更新成功抄底分数
+            bottomSuccessScore = Math.Abs(bottomSuccessScore - totalscore);
 
             //更新台上方
             m_upperPlayersId = new int[tempupper.Count()];
@@ -4756,10 +5325,10 @@ namespace GameUtility
             // 测试：暂且不升级
 #endif
         }
-#endregion
+        #endregion
 
 
-#region TRANSITION
+        #region TRANSITION
         /// <summary>
         /// 准备就绪到发牌的过渡阶段
         /// </summary>
@@ -4767,7 +5336,7 @@ namespace GameUtility
         {
             // 设置盘数为 1 
             m_round = 1;
-    
+
             // 清空上一次对战的历史记录
             score = new int[4];
             for (int i = 0; i < 4; i++)
@@ -4961,11 +5530,12 @@ namespace GameUtility
         {
             // 计分结束，盘数增加
             round++;
-
+            // 清空玩家分数
+            score = new int[playerNumber];
             // 清空庄家 ID
             bankerPlayerId.Clear();
         }
-#endregion
+        #endregion
 
         /// <summary>
         /// 荷官更新函数

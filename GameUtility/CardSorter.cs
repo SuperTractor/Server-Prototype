@@ -263,8 +263,8 @@ namespace GameUtility
                         tempLevelsList.RemoveAll(level => level == playerLevels[playerId]);
                         tempLevels = tempLevelsList.ToArray();
 
-                        List<Card> levelCards = cards.FindAll(card => card.points + 1 == playerLevels[playerId]);
-                        cards.RemoveAll(card => card.points + 1 == playerLevels[playerId]);
+                        List<Card> levelCards = cards.FindAll(card => card.points == (playerLevels[playerId] - 1) % 13);
+                        cards.RemoveAll(card => card.points == (playerLevels[playerId] - 1) % 13);
                         Sort(ref levelCards, 1);
                         temp.AddRange(levelCards);
 
@@ -274,8 +274,8 @@ namespace GameUtility
                         // 对每一个级数
                         for (int i = 0; i < tempLevels.Length; i++)
                         {
-                            levelCards = cards.FindAll(card => card.points + 1 == tempLevels[i]);
-                            cards.RemoveAll(card => card.points + 1 == tempLevels[i]);
+                            levelCards = cards.FindAll(card => card.points == (tempLevels[i] - 1) % 13);
+                            cards.RemoveAll(card => card.points == (tempLevels[i] - 1) % 13);
                             Sort(ref levelCards, 1);
                             temp.AddRange(levelCards);
                         }
@@ -288,8 +288,8 @@ namespace GameUtility
                         // 对每一个级数
                         for (int i = 0; i < tempLevels.Length; i++)
                         {
-                            List<Card> levelCards = cards.FindAll(card => card.points + 1 == tempLevels[i]);
-                            cards.RemoveAll(card => card.points + 1 == tempLevels[i]);
+                            List<Card> levelCards = cards.FindAll(card => card.points == (tempLevels[i] - 1) % 13);
+                            cards.RemoveAll(card => card.points == (tempLevels[i] - 1) % 13);
                             Sort(ref levelCards, 1);
                             temp.AddRange(levelCards);
                         }

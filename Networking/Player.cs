@@ -412,9 +412,11 @@ namespace Networking
             m_name = name;
             m_id = id;
             m_socket = socket;
-
-            m_socket.ReceiveTimeout =m_receiveTimeOut;
-
+#if (DEBUG)
+#else
+            // 如果不是 DEBUG 模式，设置超时断线
+            m_socket.ReceiveTimeout = m_receiveTimeOut;
+#endif
             //cardInHand = new List<Card>();
             // 新建消息池
             m_inMessagePool = new List<Message>();
