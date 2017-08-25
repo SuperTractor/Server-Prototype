@@ -23,6 +23,12 @@ namespace GameUtility
             points = _points;
         }
 
+        public Card(int _suit, int _points)
+        {
+            suit = (Suit)_suit;
+            points = _points;
+        }
+
         // 获取 1 副牌
         public static Card[] GetCardSet()
         {

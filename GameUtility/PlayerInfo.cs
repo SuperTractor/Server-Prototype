@@ -16,11 +16,12 @@ namespace GameUtility
         public string nickname { get; set; }
         // 头像名称
         public string headImageName { get; set; }
-        // 玩家的等级；目前因为未解锁头像只有 6 个，所以一共是 7 级；暂定最高 7 级
-        // 按照分数段来确定级别（按照 grades 来确定）
-        // 100*(i-1)^2 ~ 100*i^2 为第 i 级分数段
-        // 比如 3600~4900 为第 7 级
-        public int level { get; set; }
+        // 积分；经验值；从stat.xml中的grades同步过来
+        public int experience { get; set; }
+        // 头衔；对应于stat.xml中的level
+        public string title { get; set; }
+        // 是否在线标记
+        public bool isOnline { get; set; }
 
         // 游戏统计数据部分
 
@@ -38,6 +39,13 @@ namespace GameUtility
         // 玩家的积分；计算方法见 UpdateStat
         // 升 1 级加 5 分；做 1 次台上方加 2 分；逃跑一次扣 3 分；逃跑的惩罚在program中实现
         public int grades { get; set; }
+
+        // 玩家的等级；目前因为未解锁头像只有 6 个，所以一共是 7 级；暂定最高 7 级
+        // 按照分数段来确定级别（按照 grades 来确定）
+        // 100*(i-1)^2 ~ 100*i^2 为第 i 级分数段
+        // 比如 3600~4900 为第 7 级
+        public int level { get; set; }
+
         // 最高得分
         public int highScore { get; set; }
         // 累计得分
@@ -85,6 +93,7 @@ namespace GameUtility
             username = "";
             nickname = "";
             headImageName = "";
+            title = "";
         }
 
         public PlayerInfo(string name)
@@ -148,6 +157,9 @@ namespace GameUtility
             upperRate = other.upperRate;
             level = other.level;
             grades = other.grades;
+            experience = other.experience;
+            title = other.title;
+            isOnline = other.isOnline;
         }
 
         public void CopyBasicInfoFrom(PlayerInfo other)
@@ -155,6 +167,9 @@ namespace GameUtility
             username = other.username;
             nickname = other.nickname;
             headImageName = other.headImageName;
+            experience = other.experience;
+            isOnline = other.isOnline;
+            title = other.title;
         }
 
         // 更新玩家统计信息
@@ -229,7 +244,27 @@ namespace GameUtility
             //highScore = Math.Max(highScore, score);
 
             // 更新级数
-            level = (int)(Math.Sqrt(grades / 100.0f)) + 1;
+            if (grades < 0)
+            {
+                this.level = 1;
+            }
+            else
+            {
+                this.level = (int)(Math.Sqrt(grades / 100.0f)) + 1;
+            }
+        }
+
+        public static int GetLevel(int experience)
+        {
+            // 更新级数
+            if (experience < 0)
+            {
+               return 1;
+            }
+            else
+            {
+                return (int)(Math.Sqrt(experience / 100.0f)) + 1;
+            }
         }
 
     }

@@ -181,6 +181,10 @@ namespace server_0._0._1
 
         // 统计信息表名
         static string statTableName = "stat";
+        // 等级-头衔对应表名
+        static string levelTitleTableName = "level_title";
+        // 用户信息表名
+        static string userTableName = "user";
 
         const int defaultRound = 5;
         // 游戏的局数；默认是 5 局
@@ -1578,7 +1582,7 @@ namespace server_0._0._1
                 if (isNeedTips)
                 {
                     // 从荷官处获取亮牌提示
-                    Card[] dealCardTips = m_dealer.AutoHandOut(m_dealer.currentPlayerId);
+                    Card[] dealCardTips = m_dealer.AutoHandOut(/*m_dealer.currentPlayerId*/);
                     // 将亮牌提示返回到客户端
                     //ComServer.Respond(m_players[m_dealer.currentPlayerId].socket, Card.ToInt(dealCardTips));
                     ComServer.Respond(m_dealer.currentPlayerId, Card.ToInt(dealCardTips));
@@ -1589,7 +1593,7 @@ namespace server_0._0._1
                 if (isAutoPlay)
                 {
                     // 自动出牌
-                    m_dealCards = m_dealer.AutoHandOut(m_dealer.currentPlayerId);
+                    m_dealCards = m_dealer.AutoHandOut(/*m_dealer.currentPlayerId*/);
                 }
                 else// 如果玩家没有代理
                 {
@@ -1597,7 +1601,7 @@ namespace server_0._0._1
                     if (isTimeOut)
                     {
                         // 自动出牌
-                        m_dealCards = m_dealer.AutoHandOut(m_dealer.currentPlayerId);
+                        m_dealCards = m_dealer.AutoHandOut(/*m_dealer.currentPlayerId*/);
                     }
                     else// 如果玩家还有剩余思考时间
                     {
@@ -1832,14 +1836,30 @@ namespace server_0._0._1
                                                     m_dealer.bottomSuccessID == i,  //当前玩家是否为抄底玩家
                                                     m_dealer.bottomSuccessScore,//抄底分数
                                                     Array.IndexOf(m_dealer.upperPlayersId, i) >= 0  // 是否为台上方
-                                                    ); 
+                                                    );
 
 
 
                 StatObject statObj = new StatObject();
                 statObj.CopyFrom(m_players[i]);
+
                 // 更新数据到数据库服务器
                 DBClient.Update(statTableName, statObj);
+
+                // 更新用户信息到数据库；只更新用户的积分和头衔
+                //UserObject userObj = new UserObject();
+                //userObj.CopyFrom(m_players[i]);
+                // 更新积分
+                //userObj.experience = statObj.grades;
+                DBClient.Update(userTableName, m_players[i].username, "experience", statObj.grades);
+
+                // 更新头衔
+                DataObject dataObj = DBClient.Find(levelTitleTableName, statObj.level.ToString());
+                //userObj.title = new LevelTitleObject(dataObj).title;
+                DBClient.Update(userTableName, m_players[i].username, "title", new LevelTitleObject(dataObj).title);
+
+                // 更新用户信息到数据库
+                //DBClient.Update(userTableName, userObj);
             }
         }
 
@@ -2270,8 +2290,34 @@ namespace server_0._0._1
                         DBClient.Update(statTableName, username, "totalRunTimes", totalRunTimes + 1);
                         // 获取当前积分
                         int grades = m_players.Find(player => player.username == username).grades;
-                        // 扣 3 分更新到数据库
-                        DBClient.Update(statTableName, username, "grades", grades - 3);
+
+                        // 扣 3 分更新到数据库；但是不能有负分
+                        int level;
+                        if (grades > 100)
+                        {
+                            grades = Math.Max(0, grades - 3);
+                            DBClient.Update(statTableName, username, "grades", grades);
+                            level = PlayerInfo.GetLevel(grades);
+                            DBClient.Update(statTableName, username, "level", level);
+                        }
+                        else
+                        {
+                            // 不扣分了，新手保护
+                            level = 1;
+                        }
+
+                        // 同时也更新用户信息
+                        DBClient.Update(userTableName, username, "experience", grades);
+
+                        // 更新头衔
+                        DataObject dataObj = DBClient.Find(levelTitleTableName, level.ToString());
+                        //userObj.title = new LevelTitleObject(dataObj).title;
+                        DBClient.Update(userTableName, username, "title", new LevelTitleObject(dataObj).title);
+                        // 更新分数
+                        DBClient.Update(userTableName, username, "experience", grades);
+
+
+
                         // 去掉网络部分的异常断线记录
                         ComServer.abnormallyDisconnectedUserNames.RemoveAt(0);
                     }

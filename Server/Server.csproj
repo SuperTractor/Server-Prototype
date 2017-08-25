@@ -50,9 +50,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="LevelTitleObject.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StatObject.cs" />
+    <Compile Include="UserObject.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

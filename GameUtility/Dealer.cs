@@ -1012,7 +1012,6 @@ namespace GameUtility
             }
         }
 
-
     }
 
     public class RulePlayer
@@ -2623,6 +2622,50 @@ namespace GameUtility
                     tmp.data[j.CardToIndex()]++;
             return tmp;
         }
+
+        Card IndexToCard(int index)
+        {
+            if (index == 53)
+            {
+                Card tmp = new Card(4, 13);
+                return tmp;
+            }
+            if (index == 54)
+            {
+                Card tmp = new Card(5, 13);
+                return tmp;
+            }
+            if (index % 13 == 12)
+            {
+                Card tmp = new Card(index / 13, 0);
+                return tmp;
+            }
+            else
+            {
+                Card tmp = new Card(index / 13, index % 13 + 2);
+                return tmp;
+            }
+        }
+
+
+        // CardArray到CardList的转换
+        Card[] CardListToCardArray(CardList res)
+        {
+            int count = 0;
+            for (int i = 0; i < 54; i++)
+                count += res.data[i];
+            Card[] tmp = new Card[count];
+            int top = -1;
+            for (int i = 0; i < 54; i++)
+                if (res.data[i] > 0)
+                    for (int j = 0; j < res.data[i]; j++)
+                    {
+                        top++;
+                        tmp[top] = IndexToCard(i);
+                    }
+            return tmp;
+        }
+
 
         /// <summary>
         /// 判断两张牌的大小
@@ -5015,25 +5058,233 @@ namespace GameUtility
 #endif
         }
 
+
+        CardList combination(CardList fC, int fccount, CardList hC, int[] c, int[] l, int done, int now)
+        {
+            if (done == fccount)
+            {
+                CardList pC = new CardList();
+                for (int i = 0; i < fccount; i++)
+                    pC.data[l[c[i]]]++;
+                Judgement tmp = canPlay(fC, pC, hC);
+                if (tmp.isValid)
+                    return pC;
+                else
+                {
+                    pC.data[0] = -1;
+                    return pC;
+                }
+
+            }
+            if (now + fccount - done >= l.Length)
+            {
+                CardList pC = new CardList();
+                pC.data[0] = -1;
+                return pC;
+            }
+            for (int i = now + 1; i < now + fccount - done; i++)
+            {
+                c[done] = l[i];
+                CardList tmp = combination(fC, fccount, hC, c, l, done + 1, i);
+                if (tmp.data[0] != -1)
+                    return tmp;
+            }
+            CardList pc = new CardList();
+            pc.data[0] = -1;
+            return pc;
+        }
+
+
         // 对战阶段，帮指定玩家代理出牌
-        public Card[] AutoHandOut(int playerId)
+        public Card[] AutoHandOut()
         {
 #if (FIGHT)
-            Card[] handOutCards;
-            if (playersHandCard[playerId].Count > 0)
+            RulePlayer[] rtmp = PlayerToRulePlayer(/*m_player*/);
+            CardList firstCard = ListCardToCardList(handOutCards[firstHomePlayerId]);
+            CardList handCard = rtmp[currentPlayerId].cardInHand;
+            CardList ans = new CardList();
+            if (playersHandCard[currentPlayerId].Count > 0)
             {
-                // 测试：选择指定长度的牌
-                if (dealRequiredLength <= 0)
+                if (currentPlayerId == firstHomePlayerId)
                 {
-                    handOutCards = new Card[1];
-                    Array.Copy(playersHandCard[playerId].ToArray(), handOutCards, 1);
+                    // 直接找第一个不为零的出
+                    for (int i = 0; i < 54; i++)
+                        if (handCard.data[i] > 0)
+                        {
+                            ans.data[i] = 1;
+                            break;
+                        }
                 }
                 else
                 {
-                    handOutCards = new Card[dealRequiredLength];
-                    Array.Copy(playersHandCard[playerId].ToArray(), handOutCards, dealRequiredLength);
+                    cardComb fc = new cardComb(firstCard, mainNumber, mainColor);
+                    int firstColor = fc.thisColor; 
+                    int hcount = 0;
+                    if (mainColor == 4)
+                    {
+                        if (firstColor == 4)
+                        {
+                            int[] l = new int[] { mainNumber, 13 + mainNumber, 2 * 13 + mainNumber, 3 * 13 + mainNumber, 52, 53 };
+                            for (int i = 0; i < 6; i++)
+                                hcount += handCard.data[l[i]];
+                        }
+                        else
+                        {
+                            for (int i = 0; i < 13; i++)
+                                if (i != mainNumber)
+                                    hcount += handCard.data[i + firstColor * 13];
+
+                        }
+                    }
+                    else
+                    {
+                        if (firstColor == mainColor)
+                        {
+                            int[] l = new int[] { mainNumber, 13 + mainNumber, 2 * 13 + mainNumber, 3 * 13 + mainNumber, 52, 53 };
+                            for (int i = 0; i < 6; i++)
+                                hcount += handCard.data[l[i]];
+                            for (int i = 0; i < 13; i++)
+                                if (i != mainNumber)
+                                    hcount += handCard.data[i + mainColor * 13];
+                        }
+                        else
+                        {
+                            for (int i = 0; i < 13; i++)
+                                if (i != mainNumber)
+                                    hcount += handCard.data[i + firstColor * 13];
+                        }
+                    }
+                    if (hcount < fc.Count) // 若手牌对应数少于首家出牌数
+                    {
+                        // 全部都要上 再随便加剩下的牌
+                        if (mainColor == 4)
+                        {
+                            if (firstColor == 4)
+                            {
+                                int[] l = new int[] { mainNumber, 13 + mainNumber, 2 * 13 + mainNumber, 3 * 13 + mainNumber, 52, 53 };
+                                for (int i = 0; i < 6; i++)
+                                {
+                                    ans.data[i] = handCard.data[l[i]];
+                                    handCard.data[l[i]] = 0;
+                                }
+                            }
+                            else
+                            {
+                                for (int i = 0; i < 13; i++)
+                                    if (i != mainNumber)
+                                    {
+                                        ans.data[i + firstColor * 13] = handCard.data[i + firstColor * 13];
+                                        handCard.data[i + firstColor * 13] = 0;
+
+                                    }
+                            }
+                        }
+                        else
+                        {
+                            if (firstColor == mainColor)
+                            {
+                                int[] l = new int[] { mainNumber, 13 + mainNumber, 2 * 13 + mainNumber, 3 * 13 + mainNumber, 52, 53 };
+                                for (int i = 0; i < 6; i++)
+                                {
+                                    ans.data[i] = handCard.data[l[i]];
+                                    handCard.data[l[i]] = 0;
+                                }
+                                for (int i = 0; i < 13; i++)
+                                    if (i != mainNumber)
+                                    {
+                                        ans.data[i + mainColor * 13] = handCard.data[i + mainColor * 13];
+                                        handCard.data[i + mainColor * 13] = 0;
+                                    }
+                            }
+                            else
+                            {
+                                for (int i = 0; i < 13; i++)
+                                    if (i != mainNumber)
+                                    {
+                                        ans.data[i + firstColor * 13] = handCard.data[i + firstColor * 13];
+                                        handCard.data[i + firstColor * 13] = 0;
+                                    }
+                            }
+                        }
+                        int tmp = fc.Count - hcount;
+                        for (int i = 0; i < 54; i++)
+                            if (tmp > 0 && handCard.data[i] > 0)
+                            {
+                                if (tmp <= handCard.data[i])
+                                {
+                                    ans.data[i] += tmp;
+                                    tmp = 0;
+                                }
+                                else
+                                {
+                                    ans.data[i] += handCard.data[i];
+                                    tmp -= handCard.data[i];
+                                }
+                            }
+                    }
+                    else // 穷举组合
+                    {
+                        int[] l = new int[hcount];
+                        if (mainColor == 4)
+                        {
+                            if (firstColor == 4)
+                            {
+                                int[] tmp = new int[] { mainNumber, 13 + mainNumber, 2 * 13 + mainNumber, 3 * 13 + mainNumber, 52, 53 };
+                                for (int i = 0; i < 6; i++)
+                                    for (int j=0;  j < handCard.data[tmp[i]];j++)
+                                    {
+                                        hcount--;
+                                        l[hcount] = tmp[i];
+                                    }
+                                
+                            }
+                            else
+                            {
+                                for (int i = 0; i < 13; i++)
+                                    if (i != mainNumber)
+                                        for (int j=0; j < handCard.data[i + firstColor * 13];j++)
+                                        {
+                                            hcount--;
+                                            l[hcount] = i + firstColor * 13;
+                                        }
+                            }
+                        }
+                        else
+                        {
+                            if (firstColor == mainColor)
+                            {
+                                int[] tmp = new int[] { mainNumber, 13 + mainNumber, 2 * 13 + mainNumber, 3 * 13 + mainNumber, 52, 53 };
+                                for (int i = 0; i < 6; i++)
+                                    for (int j = 0; j < handCard.data[tmp[i]]; j++)
+                                    {
+                                        hcount--;
+                                        l[hcount] = tmp[i];
+                                    }
+                                for (int i = 0; i < 13; i++)
+                                    if (i != mainNumber)
+                                        for (int j = 0; j < handCard.data[i + mainColor * 13]; j++)
+                                        {
+                                            hcount--;
+                                            l[hcount] = i + mainColor * 13;
+                                        }
+                            }
+                            else
+                            {
+                                for (int i = 0; i < 13; i++)
+                                    if (i != mainNumber)
+                                        for (int j = 0; j < handCard.data[i + firstColor * 13]; j++)
+                                        {
+                                            hcount--;
+    l[hcount] = i + firstColor * 13;
+                                        }
+                            }
+                        }
+                        int[] c = new int[fc.Count];
+                        ans = combination(firstCard,fc.Count, handCard, c,l, fc.Count, 0);
+                    }
                 }
-                return handOutCards;
+
+                return CardListToCardArray(ans);
             }
             else
             {
@@ -5041,18 +5292,18 @@ namespace GameUtility
             }
 #else
             Card[] handOutCards;
-            if (playersHandCard[playerId].Count > 0)
+            if (playersHandCard[currentPlayerId].Count > 0)
             {
                 // 测试：选择指定长度的牌
                 if (dealRequiredLength <= 0)
                 {
                     handOutCards = new Card[1];
-                    Array.Copy(playersHandCard[playerId].ToArray(), handOutCards, 1);
+                    Array.Copy(playersHandCard[currentPlayerId].ToArray(), handOutCards, 1);
                 }
                 else
                 {
                     handOutCards = new Card[dealRequiredLength];
-                    Array.Copy(playersHandCard[playerId].ToArray(), handOutCards, dealRequiredLength);
+                    Array.Copy(playersHandCard[currentPlayerId].ToArray(), handOutCards, dealRequiredLength);
                 }
                 return handOutCards;
             }
@@ -5534,6 +5785,8 @@ namespace GameUtility
             score = new int[playerNumber];
             // 清空庄家 ID
             bankerPlayerId.Clear();
+            // 将轮数归零
+            m_circle = 0;
         }
         #endregion
 
@@ -5551,5 +5804,19 @@ namespace GameUtility
         }
 
 
+        string[] titles = new string[7] { "平民", "士兵", "中尉", "都督", "少将", "卫将军", "大将军" };
+
+        // 将不同等级，现在支持 1~7 级，转换成对应的头衔
+        public string GetTitle(int level)
+        {
+            if (level < 1 || level >= titles.Length)
+            {
+                return titles[0];
+            }
+            else
+            {
+                return titles[level - 1];
+            }
+        }
     }
 }
