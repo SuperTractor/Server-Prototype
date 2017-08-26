@@ -300,21 +300,21 @@ namespace GameUtility
                     break;
                 // 其他阶段，假定已经确定主级数和主花色
                 default:
-                    // 如果是首盘
-                    if (m_round == 1)
-                    {
-                        // 先拿出来所有的 A
-                        List<Card> levelCards = cards.FindAll(card => card.points == 0);
-                        cards.RemoveAll(card => card.points == 0);
-                        Sort(ref levelCards, 1);
-                        temp.AddRange(levelCards);
-                        // 然后再排剩下的牌
-                        Sort(ref cards, 2);
-                        temp.AddRange(cards);
-                    }
-                    // 如果不是首盘
-                    else
-                    {
+                    //// 如果是首盘
+                    //if (m_round == 1)
+                    //{
+                    //    // 先拿出来所有的 A
+                    //    List<Card> levelCards = cards.FindAll(card => card.points == 0);
+                    //    cards.RemoveAll(card => card.points == 0);
+                    //    Sort(ref levelCards, 1);
+                    //    temp.AddRange(levelCards);
+                    //    // 然后再排剩下的牌
+                    //    Sort(ref cards, 2);
+                    //    temp.AddRange(cards);
+                    //}
+                    //// 如果不是首盘
+                    //else
+                    //{
                         int points = MainNumber2Points(mainNumber);
                         Card.Suit suit = MainColor2Suit(mainColor);
                         // 如果不是无将
@@ -356,7 +356,7 @@ namespace GameUtility
                             Sort(ref mainCards, 2);
                             temp.AddRange(mainCards);
                         }
-                    }
+                    //}
                     break;
             }
             // 完成排序，将数组放回传进来的牌组里

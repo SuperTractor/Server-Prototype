@@ -1,4 +1,8 @@
-﻿using System;
+﻿//#define ALI
+#undef ALI
+
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,6 +11,7 @@ using System.Net;
 using System.Threading;
 using ConsoleUtility;
 using DBNetworking;
+
 
 namespace Networking
 {
@@ -112,27 +117,31 @@ namespace Networking
         // 获取本机地址
         static IPAddress GetLocalAddress()
         {
+
+#if (ALI)
+            return IPAddress.Parse(Console.ReadLine());
+#else
             var host = Dns.GetHostEntry(Dns.GetHostName());
 
-            //for(int i = host.AddressList.Length - 1; i >= 0; i--)
-            //{
-            //    if (host.AddressList[i].AddressFamily == AddressFamily.InterNetwork)
-            //    {
-            //        return host.AddressList[i];
-            //    }
-            //}
-
-            foreach (var ip in host.AddressList)
+            for (int i = host.AddressList.Length - 1; i >= 0; i--)
             {
-                if (ip.AddressFamily == AddressFamily.InterNetwork)
+                if (host.AddressList[i].AddressFamily == AddressFamily.InterNetwork)
                 {
-                    return ip;
+                    return host.AddressList[i];
                 }
             }
+
+            //foreach (var ip in host.AddressList)
+            //{
+            //    if (ip.AddressFamily == AddressFamily.InterNetwork)
+            //    {
+            //        return ip;
+            //    }
+            //}
             throw new Exception("没有找到 IP 地址");
+#endif
+
         }
-
-
 
 
         /// <summary>

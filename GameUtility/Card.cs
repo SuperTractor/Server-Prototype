@@ -47,16 +47,16 @@ namespace GameUtility
             card_set[53] = new Card(Suit.Joker1, 13);
             return card_set;
         }
-        
+
         // Rule:求单张卡对应下标
         public int CardToIndex()
         {
             if (suit != Suit.Joker0 && suit != Suit.Joker1)
             {
-                if (points == 0)
-                    return (int)suit * 13 + 12;
-                else
-                    return (int)suit * 13 + points-1;
+                //if (points == 0)
+                //    return (int)suit * 13 + 12;
+                //else
+                return (int)suit * 13 + (points + 12) % 13;
             }
             else if (suit == Suit.Joker0)
                 return 52;
@@ -123,7 +123,7 @@ namespace GameUtility
             {
                 for (int j = 0; j < ints[i]; j++)
                 {
-                    if (i < cardNumberOfOnePack-2)
+                    if (i < cardNumberOfOnePack - 2)
                     {
                         cards[count] = new Card((Suit)(i / 13), i % 13);
                     }
@@ -206,7 +206,7 @@ namespace GameUtility
                 }
                 if (deck[j] != null)
                 {
-                    Console.Write("{0}{1}\t",j, deck[j]);
+                    Console.Write("{0}{1}\t", j, deck[j]);
                 }
             }
             Console.WriteLine();
@@ -233,9 +233,9 @@ namespace GameUtility
         static public string DeckToString(List<Card> deck)
         {
             string display_str = "";
-            for(int i = 0; i < deck.Count; i++)
+            for (int i = 0; i < deck.Count; i++)
             {
-                display_str += i.ToString() + deck[i]+"\t";
+                display_str += i.ToString() + deck[i] + "\t";
             }
             return display_str;
         }
@@ -274,7 +274,7 @@ namespace GameUtility
             return !(c1 == c2);
         }
         // 延迟输出牌组, 用于抢底时, 显示手牌, 模拟摸牌效果
-        static public void DelayPrint(List<Card> deck,int milliseconds)
+        static public void DelayPrint(List<Card> deck, int milliseconds)
         {
 
         }

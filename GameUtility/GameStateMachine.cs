@@ -39,6 +39,9 @@ namespace GameUtility
             Fight,   // 对战阶段
             Fight2Score,    // 对战到计分的缓冲阶段
             Score,   // 计分
+            Score2ShowBottom,   // 计分到亮底牌的过渡阶段
+            ShowBottom,     // 亮底牌阶段
+            ShowBottom2Deal,    // 亮底牌到重新发牌的过渡阶段
             Score2Deal  // 计分到下一次发牌的缓冲阶段
         };
         State m_state;
@@ -83,9 +86,12 @@ namespace GameUtility
             PlayerHandCardAllEmpty, // 所有玩家的手牌为空
             DoneFight2Score,    // 完成对战-计分缓冲阶段的清理, 初始化
             DoneScore,  // 完成计分
+            DoneScore2ShowBottom,   // 完成积分到亮底牌的阶段
+            DoneShowBottom,     // 完成亮底牌
+            DoneShowBottom2Deal,    // 完成亮底牌到重新发牌的
             DoneScore2Deal, // 完成计分-发牌缓冲阶段的清理, 初始化
-            FinishRounds        // 完成指定局数
-
+            FinishRounds,      // 完成指定局数
+            FinishOneRound      // 完成一局
         };
 
         // 根据信号更新游戏状态机
@@ -124,7 +130,7 @@ namespace GameUtility
                 case Signal.NoHigherBid:
                     m_state = State.LastBid2BidBury;
                     break;
-                    // 如果只有 1 个台上方
+                // 如果只有 1 个台上方
                 case Signal.SingleUpperPlayer:
                     // 直接进入埋底
                     m_state = State.Touch2LastBid;
@@ -202,13 +208,26 @@ namespace GameUtility
                     m_state = State.Score;
                     break;
                 case Signal.DoneScore:
-                    m_state = State.Score2Deal;
+                    //m_state = State.Score2Deal;
+                    m_state = State.Score2ShowBottom;
+                    break;
+                case Signal.DoneScore2ShowBottom:
+                    m_state = State.ShowBottom;
+                    break;
+                case Signal.DoneShowBottom:
+                    m_state = State.ShowBottom2Deal;
+                    break;
+                case Signal.DoneShowBottom2Deal:
+                    m_state = State.Deal;
                     break;
                 case Signal.DoneScore2Deal:
                     m_state = State.Deal;
                     break;
-                    // 完成指定局数后，回到准备阶段
+                // 完成指定局数后，回到准备阶段
                 case Signal.FinishRounds:
+                    m_state = State.GetReady;
+                    break;
+                case Signal.FinishOneRound:
                     m_state = State.GetReady;
                     break;
             }

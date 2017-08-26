@@ -88,6 +88,9 @@ namespace server_0._0._1
         static Stopwatch m_touchCardStopwatch;
         // 用于最后抢底阶段的计时器
         static Stopwatch m_lastBidStopwatch;
+
+        // 用于亮牌的计时器
+        static Stopwatch m_showBottomStopwatch;
 #if (RULE)
                 // 抢底阶段显示手牌的延迟(毫秒)
         static int m_touchCardDelay = 1;
@@ -126,6 +129,8 @@ namespace server_0._0._1
         static int m_clearPlayCardDelay = 1500;
         // 玩家拥有的出牌思考时间(毫秒)
         static int m_handOutTimeLimit = 3000000;
+        // 最后亮底牌的延迟；毫秒
+        static int m_showBottomDelay = 5000;
 #endif
 
         // 庄家埋底计时器
@@ -219,6 +224,8 @@ namespace server_0._0._1
             m_findFriendStopwatch = new Stopwatch();
             // 新建寻友计时器
             m_findFriendLingerStopwatch = new Stopwatch();
+            // 新建亮底牌计时器
+            m_showBottomStopwatch = new Stopwatch();
             // 新建暂存手牌数组
             m_tempHandCards = new List<Card>[Dealer.playerNumber];
 
@@ -303,6 +310,8 @@ namespace server_0._0._1
             m_findFriendStopwatch = new Stopwatch();
             // 新建寻友计时器
             m_findFriendLingerStopwatch = new Stopwatch();
+            // 新建亮底牌计时器
+            m_showBottomStopwatch = new Stopwatch();
             // 新建暂存手牌数组
             m_tempHandCards = new List<Card>[Dealer.playerNumber];
             //for(int i = 0; i < Dealer.playerNumber; i++)
@@ -319,6 +328,13 @@ namespace server_0._0._1
         // 带等候区的玩家进入房间
         static void GetReady()
         {
+            // 如果有玩家中途离开了
+            if (ComServer.players.Count < m_players.Count)
+            {
+                // 重置服务器
+                Reset();
+            }
+
             m_players.Clear();
             // 首先更新主程序掌握的玩家列表
             // 对每一个网络交流中的玩家
@@ -1341,6 +1357,10 @@ namespace server_0._0._1
         /// </summary>
         static void Fry2FindFriend()
         {
+            // 发送主花色和主级数
+            ComServer.Broadcast(m_dealer.GetMainLevel());
+            ComServer.Broadcast((int)m_dealer.GetMainSuit());
+
             // 过渡更新
             m_dealer.Fry2FindFriend();
 
@@ -1522,6 +1542,7 @@ namespace server_0._0._1
         /// </summary>
         static void Fight()
         {
+
             // 如果不是第 1 轮出牌，而且所有玩家都出过 1 次牌，而且还没完成 1 次延时
             // 则继续延迟；否则不延迟，正常出牌
             bool isClearDelay = m_dealer.circle > 1 && m_dealer.handOutPlayerCount == 0 && !m_doneClearPlayCardDelay;
@@ -1813,6 +1834,54 @@ namespace server_0._0._1
             //}
             // 发送新级数到客户端
             ComServer.Broadcast(m_dealer.playerLevels);
+        }
+
+        /// <summary>
+        /// 处理积分到亮底牌过渡
+        /// </summary>
+        static void Score2ShowBottom()
+        {
+            // 向客户端广播底牌；请确保没有清除
+            ComServer.Broadcast(Card.ToInt(m_dealer.bottom));
+            // 重启亮底牌计时器
+            m_showBottomStopwatch.Restart();
+        }
+
+        /// <summary>
+        /// 处理亮底牌
+        /// </summary>
+        /// <returns>是否完成延迟</returns>
+        static bool ShowBottom()
+        {
+            return m_showBottomStopwatch.ElapsedMilliseconds > m_showBottomDelay;
+        }
+
+        /// <summary>
+        /// 处理亮底牌到重新发牌过渡
+        /// </summary>
+        static void ShowBottom2Deal()
+        {
+#if (DATABASE)
+            // 将玩家信息统计之后更新到数据库服务器
+            UpdatePlayerStats();
+#endif
+            // 过渡更新
+            m_dealer.ShowBottom2Deal();
+            // 清空玩家手牌
+            for (int i = 0; i < m_players.Count; i++)
+            {
+                m_dealer.playersHandCard[i].Clear();
+            }
+
+            // 这里同步一下客户端的战绩；直接把玩家信息发送到客户端
+            // 先发送玩家人数
+            ComServer.Broadcast(m_players.Count);
+            // 然后发送玩家信息
+            for (int i = 0; i < m_players.Count; i++)
+            {
+                ComServer.Broadcast(m_players[i]);
+            }
+
         }
 
         // 将玩家信息统计之后更新到数据库服务器
@@ -2218,6 +2287,32 @@ namespace server_0._0._1
                             case GameStateMachine.State.Score:
                                 Score();
                                 m_gameStateMachine.Update(GameStateMachine.Signal.DoneScore);
+                                break;
+                            case GameStateMachine.State.Score2ShowBottom:
+                                Score2ShowBottom();
+                                m_gameStateMachine.Update(GameStateMachine.Signal.DoneScore2ShowBottom);
+                                break;
+                            case GameStateMachine.State.ShowBottom:
+                                isOk = ShowBottom();
+                                if (isOk)
+                                {
+                                    m_gameStateMachine.Update(GameStateMachine.Signal.DoneShowBottom);
+                                }
+                                break;
+                            case GameStateMachine.State.ShowBottom2Deal:
+                                ShowBottom2Deal();
+                                // 如果已经游戏完指定局数
+                                if (m_dealer.round > m_gameRoundSetting)
+                                {
+                                    m_gameStateMachine.Update(GameStateMachine.Signal.FinishRounds);
+                                    // 重置服务器
+                                    Reset();
+                                }
+                                // 还没有完成指定局数
+                                else
+                                {
+                                    m_gameStateMachine.Update(GameStateMachine.Signal.FinishOneRound);
+                                }
                                 break;
                             case GameStateMachine.State.Score2Deal:
                                 Score2Deal();

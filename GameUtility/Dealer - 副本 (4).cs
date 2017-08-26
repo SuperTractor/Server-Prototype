@@ -1,6 +1,6 @@
 ﻿// 各阶段规则的开关
-#define RULE
-//#undef RULE
+//#define RULE
+#undef RULE
 
 
 #if (RULE)
@@ -1056,30 +1056,6 @@ namespace GameUtility
     {
         #region BASICS
         public int mainNumber, mainColor;
-
-        public int GetMainLevel()
-        {
-            return (mainNumber + 1) % 13;
-        }
-
-        public Card.Suit GetMainSuit()
-        {
-            switch (mainColor)
-            {
-                case 0:
-                    return Card.Suit.Diamond;
-                case 1:
-                    return Card.Suit.Spade;
-                case 2:
-                    return Card.Suit.Club;
-                case 3:
-                    return Card.Suit.Heart;
-                case 4:
-                    return Card.Suit.Joker0;
-                default:
-                    throw new Exception("主花色不符合规范");
-            }
-        }
 
         // 全牌: 全部 4 副牌
         private Card[] m_totalCard;
@@ -2598,8 +2574,8 @@ namespace GameUtility
         // 当前每个玩家的分数
         public int[] score;
 
-        // 当前盘数，出完手牌为 1 盘；在积分到发牌的过渡阶段进行更新；-1表示没有设置
-        private int m_round = -1;
+        // 当前盘数，出完手牌为 1 盘；在积分到发牌的过渡阶段进行更新
+        private int m_round = 1;
         public int round
         {
             get { return m_round; }
@@ -2649,24 +2625,24 @@ namespace GameUtility
 
         Card IndexToCard(int index)
         {
-            if (index == 52)
+            if (index == 53)
             {
                 Card tmp = new Card(4, 13);
                 return tmp;
             }
-            if (index == 53)
+            if (index == 54)
             {
                 Card tmp = new Card(5, 13);
                 return tmp;
             }
-            //if (index % 13 == 12)
-            //{
-            //    Card tmp = new Card(index / 13, 0);
-            //    return tmp;
-            //}
+            if (index % 13 == 12)
+            {
+                Card tmp = new Card(index / 13, 0);
+                return tmp;
+            }
             else
             {
-                Card tmp = new Card(index / 13, (index + 1) % 13);
+                Card tmp = new Card(index / 13, index % 13 + 2);
                 return tmp;
             }
         }
@@ -3788,7 +3764,7 @@ namespace GameUtility
                     {
                         if (playCard.data[i] == firstSame && biggerThan(i, maxPlay, mainColor, mainNumber))
                             maxPlay = i;
-                        if (firstCard.data[i] == firstSame && biggerThan(i, maxFirst, mainColor, mainNumber))
+                        if (firstCard.data[i] >= 2 && biggerThan(i, maxFirst, mainColor, mainNumber))
                             maxFirst = i;
                     }
 
@@ -5089,7 +5065,7 @@ namespace GameUtility
             {
                 CardList pC = new CardList();
                 for (int i = 0; i < fccount; i++)
-                    pC.data[c[i]]++;
+                    pC.data[l[c[i]]]++;
                 Judgement tmp = canPlay(fC, pC, hC);
                 if (tmp.isValid)
                     return pC;
@@ -5106,7 +5082,7 @@ namespace GameUtility
                 pC.data[0] = -1;
                 return pC;
             }
-            for (int i = now + 1; i < 1 + l.Length - fccount + done; i++)
+            for (int i = now + 1; i < now + fccount - done; i++)
             {
                 c[done] = l[i];
                 CardList tmp = combination(fC, fccount, hC, c, l, done + 1, i);
@@ -5142,7 +5118,7 @@ namespace GameUtility
                 else
                 {
                     cardComb fc = new cardComb(firstCard, mainNumber, mainColor);
-                    int firstColor = fc.thisColor;
+                    int firstColor = fc.thisColor; 
                     int hcount = 0;
                     if (mainColor == 4)
                     {
@@ -5255,18 +5231,18 @@ namespace GameUtility
                             {
                                 int[] tmp = new int[] { mainNumber, 13 + mainNumber, 2 * 13 + mainNumber, 3 * 13 + mainNumber, 52, 53 };
                                 for (int i = 0; i < 6; i++)
-                                    for (int j = 0; j < handCard.data[tmp[i]]; j++)
+                                    for (int j=0;  j < handCard.data[tmp[i]];j++)
                                     {
                                         hcount--;
                                         l[hcount] = tmp[i];
                                     }
-
+                                
                             }
                             else
                             {
                                 for (int i = 0; i < 13; i++)
                                     if (i != mainNumber)
-                                        for (int j = 0; j < handCard.data[i + firstColor * 13]; j++)
+                                        for (int j=0; j < handCard.data[i + firstColor * 13];j++)
                                         {
                                             hcount--;
                                             l[hcount] = i + firstColor * 13;
@@ -5299,12 +5275,12 @@ namespace GameUtility
                                         for (int j = 0; j < handCard.data[i + firstColor * 13]; j++)
                                         {
                                             hcount--;
-                                            l[hcount] = i + firstColor * 13;
+    l[hcount] = i + firstColor * 13;
                                         }
                             }
                         }
                         int[] c = new int[fc.Count];
-                        ans = combination(firstCard, fc.Count, handCard, c, l, 0, -1);
+                        ans = combination(firstCard,fc.Count, handCard, c,l, fc.Count, 0);
                     }
                 }
 
@@ -5609,6 +5585,9 @@ namespace GameUtility
         /// </summary>
         public void Ready2Deal()
         {
+            // 设置盘数为 1 
+            m_round = 1;
+
             // 清空上一次对战的历史记录
             score = new int[4];
             for (int i = 0; i < 4; i++)
@@ -5622,7 +5601,8 @@ namespace GameUtility
             m_playerCard = new Card[cardInHandInitialNumber * 4];
             m_bottom = new Card[bottomCardNumber];
 
-  
+            playerLevels = new int[playerNumber];
+
             playersHandCard = new List<Card>[playerNumber];
 
             currentBidCards = new List<Card>[playerNumber];
@@ -5644,24 +5624,10 @@ namespace GameUtility
                 currentBidCards[i] = new List<Card>();
             }
             bankerPlayerId = new List<int>();
-
-            // 如果还没开始
-            if (m_round < 0)
-            {
-                // 设置盘数为 1 
-                m_round = 1;
-                // 所有玩家都是台上方
-                m_upperPlayersId = new int[playerNumber] { 0, 1, 2, 3 };
-                // 所有玩家的级数都是 1
-                playerLevels = new int[playerNumber] { 1, 1, 1, 1 };
-            }
-            else
-            {
-
-            }
-            
-
-
+            // 所有玩家都是台上方
+            m_upperPlayersId = new int[playerNumber] { 0, 1, 2, 3 };
+            // 所有玩家的级数都是 1
+            playerLevels = new int[playerNumber] { 1, 1, 1, 1 };
             //playerLevels = new int[playerNumber] {27,27,27,27 };
 
         }
@@ -5812,22 +5778,6 @@ namespace GameUtility
         /// 积分到重新发牌的过渡阶段
         /// </summary>
         public void Score2Deal()
-        {
-            // 计分结束，盘数增加
-            round++;
-            // 清空玩家分数
-            score = new int[playerNumber];
-            // 清空庄家 ID
-            bankerPlayerId.Clear();
-            // 将轮数归零
-            m_circle = 0;
-        }
-
-
-        /// <summary>
-        /// 亮底牌到重新发牌
-        /// </summary>
-        public void ShowBottom2Deal()
         {
             // 计分结束，盘数增加
             round++;
