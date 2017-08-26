@@ -5837,6 +5837,42 @@ namespace GameUtility
             bankerPlayerId.Clear();
             // 将轮数归零
             m_circle = 0;
+
+            // 重置计数器
+            score = new int[4];
+            for (int i = 0; i < 4; i++)
+                score[i] = 0;
+
+            BidTimes = new int[4];
+            for (int i = 0; i < 4; i++)
+                BidTimes[i] = 0;
+
+            fryTimes = new int[4];
+            for (int i = 0; i < 4; i++)
+                fryTimes[i] = 0;
+
+            buryTimes = new int[4];
+            for (int i = 0; i < 4; i++)
+                buryTimes[i] = 0;
+
+            buryScore = new int[4];
+            for (int i = 0; i < 4; i++)
+                buryScore[i] = 0;
+
+            singleTimes = new int[4];
+            for (int i = 0; i < 4; i++)
+                singleTimes[i] = 0;
+
+
+            findFriendTimes = new int[4];
+            for (int i = 0; i < 4; i++)
+                findFriendTimes[i] = 0;
+
+            bottomSuccessID = -1;
+            bottomSuccessScore = 0;
+
+            currentHasBidder = false;
+
         }
         #endregion
 
