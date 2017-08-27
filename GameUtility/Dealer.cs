@@ -5,7 +5,7 @@
 
 #if (RULE)
 // 发牌
-//#define DEAL
+#define DEAL
 //#undef DEAL
 // 抢底
 #define BID
@@ -1064,6 +1064,7 @@ namespace GameUtility
 
         public Card.Suit GetMainSuit()
         {
+            // 花色编号01234对应方块 黑桃 梅花 红桃 无主
             switch (mainColor)
             {
                 case 0:
@@ -2698,7 +2699,7 @@ namespace GameUtility
         /// <param name="b">牌2，用54个数字表示</param>
         /// <param name="mainColor"></param>
         /// <param name="mainNumber"></param>
-        /// <returns>a>b返回true，否则返回false</returns>
+        /// <returns>a大于b返回true，否则返回false,！！！！注意，返回false不一定代表a小于b，可能是a,b不在一个区间上</returns>
         bool biggerThan(int a, int b, int mainColor, int mainNumber)
         {
             if (a == -1)
@@ -2709,59 +2710,65 @@ namespace GameUtility
                 return false;
             if (mainColor == 4)
             {
-                // 大小王
-                if (a == 53 || (a == 52 && b != 53))
-                    return true;
-                if (b == 53 || (b == 52 && a != 53))
-                    return false;
-                // 主级牌
-                if (a % 13 == mainNumber && b % 13 == mainNumber)
-                    return false;
-                if (a % 13 == mainNumber && b % 13 != mainNumber)
-                    return true;
-                if (a % 13 != mainNumber && b % 13 == mainNumber)
-                    return false;
-                // 副牌
-                if (a % 13 > b % 13)
-                    return true;
-                else
-                    return false;
-            }
-            else // 有主
-            {
-                // 大小王
-                if (a == 53 || (a == 52 && b != 53))
-                    return true;
-                if (b == 53 || (b == 52 && a != 53))
-                    return false;
-                // 主级牌
-                if (b % 13 == mainNumber && b / 13 == mainColor)
-                    return false;
-                if (a % 13 == mainNumber && a / 13 == mainColor)
-                    return true;
-                // 副主级牌
-                if (b % 13 == mainNumber && b / 13 != mainColor)
-                    return false;
-                if (a % 13 == mainNumber && a / 13 != mainColor)
-                    return true;
-                //主花色牌
-                if (a / 13 == mainColor)
-                    if (b / 13 == mainColor)
+                //主牌
+                if (a == 53 || a == 52 || a % 13 == mainNumber)
+                {
+                    if (b == 53 || b == 52 || b % 13 == mainNumber)
                     {
-                        if (a % 13 > b % 13)
+                        if (a == 53 || (a == 52 && b != 53))
                             return true;
                         else
                             return false;
                     }
                     else
-                        return true;
-                // 副牌
-                if (a % 13 > b % 13)
-                    return true;
+                        return false;
+                }
+                else//副牌
+                {
+                    if (b == 53 || b == 52 || b % 13 == mainNumber)
+                        return false;
+                    else
+                    {
+                        //同一花色
+                        if ((int)a / 13 == (int)b / 13 && a % 13 > b % 13)
+                            return true;
+                        else
+                            return false;
+                    }
+                }
+            }
+            else // 有主
+            {
+                // 主级牌
+                if (a == 53 || a == 52 || a % 13 == mainNumber || (int)a / 13 == mainColor)
+                {
+                    if (b == 53 || b == 52 || b % 13 == mainNumber || (int)b / 13 == mainColor)
+                    {
+                        if (a == 53 || (a == 52 && b != 53) || (a % 13 == mainNumber && (int)a / 13 == mainColor && b < 52)
+                            || (a % 13 == mainNumber && (int)a / 13 != mainColor && b % 13 != mainNumber && (int)b / 13 == mainColor)
+                            || (a % 13 != mainNumber && (int)a / 13 == mainColor && b % 13 != mainNumber && (int)b / 13 == mainColor && a > b))
+                            return true;
+                        else
+                            return false;
+                    }
+                    else
+                        return false;
+                }
                 else
-                    return false;
+                {
+                    if (b == 53 || b == 52 || b % 13 == mainNumber || (int)b / 13 == mainColor)
+                        return false;
+                    else
+                    {
+                        if ((int)a / 13 == (int)b / 13 && a % 13 > b % 13)
+                            return true;
+                        else
+                            return false;
+                    }
+                }
             }
         }
+
 
         /// <summary>
         /// 找出长度为k的最大的拖拉机
@@ -3347,7 +3354,7 @@ namespace GameUtility
                 {
                     for (int j = 0; j < 54; j++)
                     {
-                        if (player[p].cardInHand.data[j] > 0 && biggerThan(j, minf, mainColor, mainNumber))
+                        if (player[p].cardInHand.data[j] > 0 && (biggerThan(j, minf, mainColor, mainNumber) || j == minf))
                         {
                             return false;
                         }
@@ -5622,7 +5629,7 @@ namespace GameUtility
             m_playerCard = new Card[cardInHandInitialNumber * 4];
             m_bottom = new Card[bottomCardNumber];
 
-  
+
             playersHandCard = new List<Card>[playerNumber];
 
             currentBidCards = new List<Card>[playerNumber];
@@ -5659,7 +5666,7 @@ namespace GameUtility
             {
 
             }
-            
+
 
 
             //playerLevels = new int[playerNumber] {27,27,27,27 };

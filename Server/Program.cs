@@ -1357,6 +1357,9 @@ namespace server_0._0._1
         /// </summary>
         static void Fry2FindFriend()
         {
+            // 炒底阶段结束，更新主牌信息
+            m_dealer.UpdateMainFry();
+
             // 发送主花色和主级数
             ComServer.Broadcast(m_dealer.GetMainLevel());
             ComServer.Broadcast((int)m_dealer.GetMainSuit());
@@ -1388,8 +1391,6 @@ namespace server_0._0._1
             //    m_dealer.showCards[j].Clear();
             //}
 
-            // 炒底阶段结束，更新主牌信息
-            m_dealer.UpdateMainFry();
             // 更新庄家
             m_dealer.UpdateBankerFry();
 

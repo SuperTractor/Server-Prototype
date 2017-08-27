@@ -212,7 +212,7 @@ namespace GameUtility
         /// </summary>
         /// <param name="cards">要排序的牌组</param>
         /// <param name="playerId">玩家 ID</param>
-        public void Sort(ref List<Card> cards, int playerId, GameStateMachine.State state)
+        public void Sort(ref List<Card> cards, int playerId, /*GameStateMachine.State state*/int mode)
         {
             /// <summary>
             /// 检查某玩家是否为台上方玩家
@@ -224,8 +224,8 @@ namespace GameUtility
                 return Array.IndexOf(upperPlayersId, id) >= 0;
             }
 
-            // 不对空的手牌进行排序
-            if (cards.Count <= 0)
+            // 不对空的；或者只有 1 张手牌进行排序
+            if (cards.Count <= 1)
             {
                 return;
             }
@@ -242,10 +242,10 @@ namespace GameUtility
             {
                 temp.Add(new Card(Card.Suit.Joker0, 13));
             }
-            switch (state)
+            switch (mode)
             {
-                // 发牌阶段
-                case GameStateMachine.State.Deal:
+                // 发牌阶段；没有完全确定主花色和主级数
+                case /*GameStateMachine.State.Deal*/0:
                     // 然后是主牌：即点数是台上方级数的牌，对台下方，级数大的在前，小的在后；对台上方，自己的级数在前，其他级数从大到小；同级数里面，数量多的花色在前，少的在后，数量一样的，随便
                     // 先来排一下级数
                     int[] tempLevels = new int[upperPlayersId.Length];
@@ -299,7 +299,7 @@ namespace GameUtility
                     temp.AddRange(cards);
                     break;
                 // 其他阶段，假定已经确定主级数和主花色
-                default:
+                case 1:
                     //// 如果是首盘
                     //if (m_round == 1)
                     //{
