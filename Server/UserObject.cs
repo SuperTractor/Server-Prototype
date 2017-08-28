@@ -5,7 +5,7 @@ using System.Text;
 using DatabaseUtility;
 using GameUtility;
 
-namespace server_0._0._1
+namespace Server
 {
     /// <summary>
     /// 对应 user 表单一个记录

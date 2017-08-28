@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using DatabaseUtility;
 
-namespace server_0._0._1
+namespace Server
 {
     public class LevelTitleObject : DataObject
     {

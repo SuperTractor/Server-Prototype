@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using DatabaseUtility;
 using GameUtility;
 
-namespace server_0._0._1
+namespace Server
 {
     /// <summary>
     /// 对应 stat 表单一个记录

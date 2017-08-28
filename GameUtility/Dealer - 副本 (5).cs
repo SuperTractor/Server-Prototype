@@ -363,15 +363,11 @@ namespace GameUtility
                 }
             }
 
-            // 确定类型 拖拉机 单张 对子 三同 四同
+            //确定类型 拖拉机 单张 对子 三同 四同
             if (thisSame == 2 && data.Count > 1)
                 thisType = 0;
             else
                 thisType = thisSame;
-            // 纠正thisColor
-            for (int i = 0; i < 4; i++)
-                if (init.data[i * 13 + mainNumber] > 0)
-                    thisColor = mainColor;
             return;
 
             // 甩牌 记录最长拖拉机 TODO
@@ -3425,71 +3421,71 @@ namespace GameUtility
 
             //牌数不够（不是没有）该花色牌全部得出，且必输
             //牌数够时，只能出该区间的牌
-            //int hcount = 0;
-            //int pcount = 0;
-            //if (mainColor == 4)
-            //{
-            //    if (firstColor == 4)
-            //    {
-            //        int[] l = new int[] { mainNumber, 13 + mainNumber, 2 * 13 + mainNumber, 3 * 13 + mainNumber, 52, 53 };
-            //        for (int i = 0; i < 6; i++)
-            //        {
-            //            hcount += handCard.data[l[i]];
-            //            pcount += playCard.data[l[i]];
-            //        }
-            //    }
-            //    else
-            //    {
-            //        for (int i = 0; i < 13; i++)
-            //            if (i != mainNumber)
-            //            {
-            //                hcount += handCard.data[i + firstColor * 13];
-            //                pcount += playCard.data[i + firstColor * 13];
-            //            }
+            int hcount = 0;
+            int pcount = 0;
+            if (mainColor == 4)
+            {
+                if (firstColor == 4)
+                {
+                    int[] l = new int[] { mainNumber, 13 + mainNumber, 2 * 13 + mainNumber, 3 * 13 + mainNumber, 52, 53 };
+                    for (int i = 0; i < 6; i++)
+                    {
+                        hcount += handCard.data[l[i]];
+                        pcount += playCard.data[l[i]];
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < 13; i++)
+                        if (i != mainNumber)
+                        {
+                            hcount += handCard.data[i + firstColor * 13];
+                            pcount += playCard.data[i + firstColor * 13];
+                        }
 
-            //    }
-            //}
-            //else
-            //{
-            //    if (firstColor == mainColor)
-            //    {
-            //        int[] l = new int[] { mainNumber, 13 + mainNumber, 2 * 13 + mainNumber, 3 * 13 + mainNumber, 52, 53 };
-            //        for (int i = 0; i < 6; i++)
-            //        {
-            //            hcount += handCard.data[l[i]];
-            //            pcount += playCard.data[l[i]];
-            //        }
-            //        for (int i = 0; i < 13; i++)
-            //        {
-            //            if (i != mainNumber)
-            //            {
-            //                hcount += handCard.data[i + mainColor * 13];
-            //                pcount += playCard.data[i + mainColor * 13];
-            //            }
-            //        }
-            //    }
-            //    else
-            //    {
-            //        for (int i = 0; i < 13; i++)
-            //            if (i != mainNumber)
-            //            {
-            //                hcount += handCard.data[i + firstColor * 13];
-            //                pcount += playCard.data[i + firstColor * 13];
-            //            }
-            //    }
-            //}
-            //if (hcount < fc.Count && hcount != 0)
-            //{
-            //    if (hcount != pcount)
-            //        return 0;
-            //    else
-            //        return 1;
-            //}
-            //else
-            //{
-            //    if (pc.thisColor != fc.thisColor && pc.thisColor != mainColor)
-            //         return 0;
-            //}
+                }
+            }
+            else
+            {
+                if (firstColor == mainColor)
+                {
+                    int[] l = new int[] { mainNumber, 13 + mainNumber, 2 * 13 + mainNumber, 3 * 13 + mainNumber, 52, 53 };
+                    for (int i = 0; i < 6; i++)
+                    {
+                        hcount += handCard.data[l[i]];
+                        pcount += playCard.data[l[i]];
+                    }
+                    for (int i = 0; i < 13; i++)
+                    {
+                        if (i != mainNumber)
+                        {
+                            hcount += handCard.data[i + mainColor * 13];
+                            pcount += playCard.data[i + mainColor * 13];
+                        }
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < 13; i++)
+                        if (i != mainNumber)
+                        {
+                            hcount += handCard.data[i + firstColor * 13];
+                            pcount += playCard.data[i + firstColor * 13];
+                        }
+                }
+            }
+            if (hcount < fc.Count && hcount != 0)
+            {
+                if (hcount != pcount)
+                    return 0;
+                else
+                    return 1;
+            }
+            else
+            {
+                if (pc.thisColor != fc.thisColor && pc.thisColor != mainColor)
+                    return 0;
+            }
 
 
             if (fc.thrown)

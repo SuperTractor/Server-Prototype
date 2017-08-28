@@ -1,7 +1,6 @@
 ﻿//#define ALI
 #undef ALI
 
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,9 +10,10 @@ using System.Net;
 using System.Threading;
 using ConsoleUtility;
 using DBNetworking;
+using Networking;
+using System.Diagnostics;
 
-
-namespace Networking
+namespace Server
 {
     // 服务器专用交流接口
     // channel = 0 -> 用于正常沟通的网络通信频道
@@ -114,6 +114,14 @@ namespace Networking
         // 记录断线玩家的用户名；主线程会根据这个记录来修改逃跑次数
         public static List<string> abnormallyDisconnectedUserNames = new List<string>();
 
+        // 房间 ID 列表
+        static List<string> m_roomIds = new List<string>();
+        // 房间 ID 数位
+        static int m_roomIdLength = 6;
+
+        // 房间（服务）列表
+        static List<RoomService> m_rooms = new List<RoomService>();
+
         // 获取本机地址
         static IPAddress GetLocalAddress()
         {
@@ -172,6 +180,11 @@ namespace Networking
             // 初始化用户 ID 卡
             m_idCards = new List<int>(Enumerable.Range(0, capacity));
 
+            // 初始化房间 ID 列表
+            List<int> tempRoomIds = new List<int>(Enumerable.Range(0, (int)Math.Pow(10, m_roomIdLength)));
+            // 数字左端端填充 0 
+            m_roomIds = tempRoomIds.ConvertAll(id => id.ToString().PadLeft(m_roomIdLength, '0'));
+
             //Console.WriteLine("启动监听{0}成功", m_socket.LocalEndPoint.ToString());
             MyConsole.Log("启动监听" + m_socket.LocalEndPoint.ToString() + "成功",/* "ComServer",*/ MyConsole.LogType.Debug);
             // 引用传进来的事件
@@ -179,6 +192,32 @@ namespace Networking
             // 存放事件，以备后用
             m_events[0] = m_doneGameLoopEvent;
             m_events[1] = m_doneHandleDisconnect;
+        }
+
+        public static void Initialize(int playerNumber)
+        {
+            m_requiredNumber = playerNumber;
+            // 初始化客户端列表
+            m_players = new List<Player>();
+            // 初始化断线客户端 ID
+            disconnectClientIds = new List<int>();
+            // 初始化 socket
+            //m_ip = IPAddress.Parse(m_ipStr);
+
+            // 获取本机地址
+            m_ip = GetLocalAddress();
+
+            m_socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            m_socket.Bind(new IPEndPoint(m_ip, m_port));
+            m_socket.Listen(m_backlog);
+            // 初始化房间 ID 列表
+            List<int> tempRoomIds = new List<int>(Enumerable.Range(0, (int)Math.Pow(10, m_roomIdLength)));
+            // 数字左端端填充 0 
+            m_roomIds = tempRoomIds.ConvertAll(id => id.ToString().PadLeft(m_roomIdLength, '0'));
+
+            //Console.WriteLine("启动监听{0}成功", m_socket.LocalEndPoint.ToString());
+            MyConsole.Log("启动监听" + m_socket.LocalEndPoint.ToString() + "成功",/* "ComServer",*/ MyConsole.LogType.Debug);
+
         }
 
         public static object Respond(int playerId, object sth, int channel = 0)
@@ -221,7 +260,6 @@ namespace Networking
                     throw;
                 }
                 //}
-
             }
         }
 
@@ -260,7 +298,6 @@ namespace Networking
             {
                 throw new Exception("尝试发 ID 卡，然而早就发完了");
             }
-
         }
 
         // 回收 ID 卡
@@ -274,6 +311,54 @@ namespace Networking
             else
             {
                 m_idCards.Add(id);
+            }
+        }
+
+        // 随机分配房间号码
+        static string DistributeRoomId(string id = null)
+        {
+            if (id == null)
+            {
+                if (m_roomIds.Count > 0)
+                {
+                    Random rdn = new Random();
+                    int idx = rdn.Next() % m_roomIds.Count;
+                    string roomId = m_roomIds[idx];
+                    m_roomIds.Remove(roomId);
+                    return roomId;
+                }
+                else
+                {
+                    throw new Exception("尝试发房间 ID 卡，然而早就发完了");
+                }
+            }
+            else
+            {
+                int idx = m_roomIds.IndexOf(id);
+                if (idx >= 0)
+                {
+                    m_roomIds.Remove(id);
+                    return id;
+                }
+                else
+                {
+                    throw new Exception(string.Format("ID {0} 早就被发走了", id));
+                }
+            }
+
+        }
+
+        // 回收房间号码
+        static void RecycleRoomId(string roomId)
+        {
+            int idx = m_roomIds.IndexOf(roomId);
+            if (idx >= 0)
+            {
+                throw new Exception("尝试回收还没分发的房间 ID 卡");
+            }
+            else
+            {
+                m_roomIds.Add(roomId);
             }
         }
 
@@ -298,13 +383,68 @@ namespace Networking
             //m_postManagerThread.Start();
         }
 
-        // 等待客户端连接
+        /// <summary>
+        /// 开一个新房间
+        /// </summary>
+        /// <returns>返回新房间在列表中的下标</returns>
+        static int OpenNewRoom(string roomId = null)
+        {
+            // 如果没有指定要开的房号
+            if (roomId == null)
+            {
+                // 新建房间实例；使用系统分配的房间 ID
+                m_rooms.Add(new RoomService(DistributeRoomId()));
+                return m_rooms.Count - 1;
+            }
+            // 如果指定了要开的房号
+            else
+            {
+                // 检查这个房间是否已经开了
+                int idx = m_rooms.FindIndex(room => room.id == roomId);
+                // 如果这个房间已经开了
+                if (idx >= 0)
+                {
+                    // 那就不用重复开房了
+                    return idx;
+                }
+                // 否则，就真的要开房了
+                else
+                {
+                    // 新建房间实例
+                    m_rooms.Add(new RoomService(DistributeRoomId(roomId)));
+                    // 去除相应的 ID 卡
+                    //m_roomIds.Remove(roomId);
+                    return m_rooms.Count - 1;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 回收已经没有玩家的房间
+        /// </summary>
+        static void RecycleRooms()
+        {
+            // 先获取停止服务的房间的 ID
+            List<string> stopServiceRoomId = m_rooms.FindAll(room => room.doneService).ConvertAll(room => room.id);
+            // 然后移出所有停止服务的房间
+            m_rooms.RemoveAll(room => room.doneService);
+            // 然后回收房间 ID
+            for (int i = 0; i < stopServiceRoomId.Count; i++)
+            {
+                MyConsole.Log(string.Format("已回收房间 {0}", stopServiceRoomId[i]));
+                RecycleRoomId(stopServiceRoomId[i]);
+            }
+        }
+
+        // 打开一个新的房间
+
+        // 接待处：等待客户端连接
         public static void WaitClient()
         {
             MyConsole.Log("准备开始接待线程"/*, Thread.CurrentThread.Name*/, MyConsole.LogType.Debug);
             int idx;
             // 服务器还没有满时
-            // 测试：多少用户都接
+            // 测试：多少用户都接；接了再说
             while (true)
             {
                 MyConsole.Log("等待客户端接入"/*, Thread.CurrentThread.Name*/, MyConsole.LogType.Debug);
@@ -312,6 +452,7 @@ namespace Networking
                 m_waitingCustomerEvent.Set();
                 // 接收客户端连接
                 Socket socket = m_socket.Accept();
+                MyConsole.Log("接收连接 " + socket.RemoteEndPoint.ToString(),/* Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
 
                 // 指示已经有客户端连接，准备开始接待事宜
                 m_waitingCustomerEvent.Reset();
@@ -322,51 +463,227 @@ namespace Networking
                 //// 等待断线处理工作完成
                 //m_doneHandleDisconnect.WaitOne();
                 //// 等待游戏流程完成
-                m_doneGameLoopEvent.WaitOne();
+                //m_doneGameLoopEvent.WaitOne();
                 //// 重置
                 //m_doneHandleDisconnect.Reset();
                 //m_doneGameLoopEvent.Reset();
 
+                // 先回收已经停止服务的房间
+                RecycleRooms();
+
+                // 等待所有房间收到开始接待的事件
+                for (int i = 0; i < m_rooms.Count; i++)
+                {
+                    m_rooms[i].receivedEvent.WaitOne();
+                }
+
                 // 指示没有完成接待
                 m_doneReceptEvent.Reset();
-                MyConsole.Log("接收连接 " + socket.RemoteEndPoint.ToString(),/* Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
+
+                // 创建玩家实例
+                Player thisPlayer = new Player(socket);
+
+                try
+                {
+                    // 如果玩家数目已经超出范围
+
+                    // 获取玩家的用户名
+                    thisPlayer.name = (string)thisPlayer.Respond();
+
+                    // 接收玩家选择的匹配模式
+                    int mode = (int)thisPlayer.Respond();
+                    // 返回客户端的消息
+                    string message;
+                    // 返回客户端的结果
+                    bool isOk;
+                    // 匹配模式代码；0 - 快速匹配；1 - 精准匹配；2 - 开房
+                    // 如果是快速匹配模式
+                    if (mode == 0)
+                    {
+                        // 选取一个没有满员的
+                        List<RoomService> notFullRooms = m_rooms.FindAll(room => !room.IsFull());
+                        bool hasNotFullRoom = notFullRooms.Count > 0;
+                        // 告知客户端是否有没有满员的房间
+                        thisPlayer.Respond(hasNotFullRoom);
+                        // 如果所有房间都已经满员了
+                        if (!hasNotFullRoom)
+                        {
+                            // 那就只能开一个新的房间了
+                            idx = OpenNewRoom();
+                            // 将此玩家加入指定房间；注意addPlayer里面也有网络通信
+                            m_rooms[idx].AddPlayer(thisPlayer);
+                            // 设置返回消息
+                            message = string.Format("成功进入房间 {0}", m_rooms[idx].id);
+                            isOk = true;
+                        }
+                        // 如果的确有的房间没有满员
+                        else
+                        {
+                            // 最多人的房间
+                            int maxPlayerNumber = notFullRooms.Max(room => room.GetPlayerNumber());
+                            idx = m_rooms.FindIndex(room => room.GetPlayerNumber() == maxPlayerNumber);
+                            // 等待此房间完成一次循环
+                            //m_rooms[idx].doneGameLoopEvent.WaitOne();
+                            // 将此玩家加入指定房间；注意addPlayer里面也有网络通信
+                            m_rooms[idx].AddPlayer(thisPlayer);
+                            // 设置返回消息
+                            message = string.Format("成功进入房间 {0}", m_rooms[idx].id);
+                            isOk = true;
+                        }
+                    }
+                    // 如果是精准匹配模式
+                    else if (mode == 1)
+                    {
+                        // 获取玩家选择的房号，假定是 6 位数字（客户端负责检查）
+                        string roomId = (string)thisPlayer.Respond();
+                        // 检查一下这个房间开了没有
+                        idx = m_rooms.FindIndex(room => room.id == roomId);
+                        bool isOpen = idx >= 0;
+                        // 告知客户端此房间开了没有
+                        thisPlayer.Respond(isOpen);
+
+                        // 如果这个房间开了
+                        if (isOpen)
+                        {
+                            // 检查这房间满人没有
+                            bool isFull = m_rooms[idx].IsFull();
+                            // 告知客户端此房间满人没有
+                            thisPlayer.Respond(isFull);
+                            // 如果这个房间是已经满人了
+                            if (isFull)
+                            {
+                                message = string.Format("房间 {0} 已经满员，请选择其他房间", roomId);
+                                isOk = false;
+                            }
+                            // 如果这个房间还没有满人
+                            else
+                            {
+                                // 等待该房间先跑完一次主循环
+                                //m_rooms[idx].doneGameLoopEvent.WaitOne();
+                                // 将此玩家加入指定房间；注意addPlayer里面也有网络通信
+                                m_rooms[idx].AddPlayer(thisPlayer);
+                                // 设置返回消息
+                                message = string.Format("成功进入房间 {0}", roomId);
+                                isOk = true;
+                            }
+                        }
+                        // 如果这个房间还没有开
+                        else
+                        {
+                            // 那就只能开一个新的房间了
+                            idx = OpenNewRoom(roomId);
+                            // 将此玩家加入指定房间；注意addPlayer里面也有网络通信
+                            m_rooms[idx].AddPlayer(thisPlayer);
+                            // 设置返回消息
+                            message = string.Format("成功进入房间 {0}", roomId);
+                            isOk = true;
+                        }
+                    }
+                    // 如果是开房模式
+                    else
+                    {
+                        // 那就只能开一个新的房间了
+                        idx = OpenNewRoom();
+                        // 将此玩家加入指定房间；注意addPlayer里面也有网络通信
+                        m_rooms[idx].AddPlayer(thisPlayer);
+                        // 设置返回消息
+                        message = string.Format("成功进入房间 {0}", m_rooms[idx].id);
+                        isOk = true;
+                    }
+                    // 向客户端发送服务器返回消息
+                    thisPlayer.Respond(message);
+                    // 向客户端发送服务器返回结果
+                    thisPlayer.Respond(isOk);
+                    // 如果玩家成功进入了房间
+                    if (isOk)
+                    {
+                        // 如果这是一个新房间
+                        if (m_rooms[idx].GetPlayerNumber() == 1)
+                        {
+                            // 那么启动房间的服务
+                            Thread roomServiceThread = new Thread(new ThreadStart(m_rooms[idx].Serve));
+                            roomServiceThread.Start();
+                            // 注意不能等待房间服务器启动，因为房间服务也在等待接待线程完成；两相等待，导致死锁
+                            //while (roomServiceThread.IsAlive) ;
+                        }
+                        // 如果这是一个旧房间，接待完成后自动会开始服务
+                        else
+                        {
+
+                        }
+                        m_rooms[idx].SetOk2Loop();
+                    }
+                    // 如果没有成功进入房间，就断开他的连接
+                    else
+                    {
+                        // 断开和这个客户端的连接
+                        socket.Close();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // 断开和这个客户端的连接
+                    socket.Close();
+
+                    // Get stack trace for the exception with source file information
+                    var st = new StackTrace(ex, true);
+
+                    StackFrame[] frames = st.GetFrames();
+
+                    for (int i = 0; i < frames.Length; i++)
+                    {
+                        MyConsole.Log(frames[i].ToString());
+                    }
+
+                    MyConsole.Log(ex.Message);
+
+                }
+                finally
+                {
+                    // 标志完成接待工作
+                    m_doneReceptEvent.Set();
+                }
+
                 // 分配 ID 卡
-                int id = DistributeId();
+                //int id = DistributeId();
 
                 // 指示正在等待客户端连接
-                if (m_players.Count < 4)
-                {
-                    //try
-                    //{
-                    //// 获取名字
-                    //string name = (string)Respond(socket, id);
-                    // 新增客户端
-                    m_players.Add(new Player("temp-name", id, socket));
-                    //Player thisPlayer = m_players.Last();
-                    // 启动邮差
-                    //StartPostman(thisPlayer);
+                //if (m_players.Count < 4)
+                //{
+                //try
+                //{
+                //// 获取名字
+                //string name = (string)Respond(socket, id);
+                // 新增客户端
+                //m_players.Add(new Player("temp-name", id, socket));
 
-                    // 获取名字，发送 ID
-                    MyConsole.Log("准备从" + socket.RemoteEndPoint.ToString() + "获取用户名",/* Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
 
-                    string name = (string)Respond(id, id, 2);
-                    m_players.Last().name = name;
-                    //Console.WriteLine("用户" + name + "进入房间；ID = " + id.ToString());
-                    MyConsole.Log("用户" + name + "进入房间；ID = " + id.ToString(), /*Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
 
-                }
-                // 如果游戏玩家已经满员
-                else
-                {
-                    // 将连接的玩家加入观战玩家列表
-                    m_watchPlayers.Add(new Player("temp-name", id, socket));
-                    // 获取名字，发送 ID
-                    MyConsole.Log("准备从" + socket.RemoteEndPoint.ToString() + "获取用户名",/* Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
-                    string name = (string)Respond(id, id, 2);
-                    m_watchPlayers.Last().name = name;
-                    //Console.WriteLine("用户" + name + "进入房间；ID = " + id.ToString());
-                    MyConsole.Log("用户" + name + "进入房间；ID = " + id.ToString(), /*Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
-                }
+                ////Player thisPlayer = m_players.Last();
+                //// 启动邮差
+                ////StartPostman(thisPlayer);
+
+                //// 获取名字，发送 ID
+                //MyConsole.Log("准备从" + socket.RemoteEndPoint.ToString() + "获取用户名",/* Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
+
+                //string name = (string)Respond(id, id, 2);
+                //m_players.Last().name = name;
+                ////Console.WriteLine("用户" + name + "进入房间；ID = " + id.ToString());
+                //MyConsole.Log("用户" + name + "进入房间；ID = " + id.ToString(), /*Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
+
+                //}
+                //// 如果游戏玩家已经满员
+                //else
+                //{
+                //    // 将连接的玩家加入观战玩家列表
+                //    m_watchPlayers.Add(new Player("temp-name", id, socket));
+                //    // 获取名字，发送 ID
+                //    MyConsole.Log("准备从" + socket.RemoteEndPoint.ToString() + "获取用户名",/* Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
+                //    string name = (string)Respond(id, id, 2);
+                //    m_watchPlayers.Last().name = name;
+                //    //Console.WriteLine("用户" + name + "进入房间；ID = " + id.ToString());
+                //    MyConsole.Log("用户" + name + "进入房间；ID = " + id.ToString(), /*Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
+                //}
 
                 // 先锁住对该客户端的网络通信，好在主线程里做同步
                 //m_players.Last().Lock();
@@ -394,8 +711,7 @@ namespace Networking
                 //{
                 //    m_gameReadyEvent.Set();
                 //}
-                // 标志完成接待工作
-                m_doneReceptEvent.Set();
+
                 // 触发先被阻塞的线程启动
                 //m_events[idx].Set();
             }

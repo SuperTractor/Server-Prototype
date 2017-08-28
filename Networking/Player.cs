@@ -20,7 +20,10 @@ namespace Networking
             {
                 return m_id;
             }
-            //set;
+            set
+            {
+                m_id = value;
+            }
         }
         // 玩家的名字
         private string m_name;
@@ -245,6 +248,18 @@ namespace Networking
             return message;
         }
 
+        public object Respond(object sth=null,int channel = 0)
+        {
+            if (sth == null)
+            {
+                return Respond(new Message("", channel)).data;
+            }
+            else
+            {
+                return Respond(new Message(sth, channel)).data;
+            }
+        }
+
         // 服务器响应客户端请求
         //public static object Respond(Socket socket, object sth, int channel = 0)
         //{
@@ -407,6 +422,21 @@ namespace Networking
 
         }
 
+        /// <summary>
+        /// 构造函数
+        /// </summary>
+        /// <param name="socket">玩家的 socket</param>
+        public Player(Socket socket)
+        {
+            m_socket = socket;
+        }
+
+        /// <summary>
+        /// 构造函数
+        /// </summary>
+        /// <param name="name">用户名</param>
+        /// <param name="id">身份标识</param>
+        /// <param name="socket">玩家的 socket</param>
         public Player(string name, int id, Socket socket)
         {
             m_name = name;
