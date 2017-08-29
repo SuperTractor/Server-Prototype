@@ -9,6 +9,9 @@ using System.Diagnostics;
 using System.IO;
 using ConsoleUtility;
 
+using System.Net;
+using DBNetworking;
+
 namespace Networking
 {
     public class Player
@@ -204,7 +207,7 @@ namespace Networking
                 message = (Message)Serializer.Receive(m_socket);
                 //message = Receive();
             }
-            catch
+            catch(Exception)
             {
                 throw;
             }

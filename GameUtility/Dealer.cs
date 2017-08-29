@@ -2683,6 +2683,7 @@ namespace GameUtility
             int count = 0;
             for (int i = 0; i < 54; i++)
                 count += res.data[i];
+            Console.WriteLine(count);
             Card[] tmp = new Card[count];
             int top = -1;
             for (int i = 0; i < 54; i++)
@@ -5318,7 +5319,6 @@ namespace GameUtility
                         ans = combination(firstCard, fc.Count, handCard, c, l, 0, -1);
                     }
                 }
-
                 return CardListToCardArray(ans);
             }
             else

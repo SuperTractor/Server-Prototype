@@ -30,9 +30,8 @@ namespace Networking
                     var bin_form = new BinaryFormatter();
                     obj = bin_form.Deserialize(memoryStream);
                 }
-                catch/* (SerializationException e)*/
+                catch
                 {
-                    //Console.WriteLine("Failed to deserialize. Reason: " + e.Message);
                     throw;
                 }
                 return obj;
@@ -81,9 +80,8 @@ namespace Networking
             {
                 obj = Deserialize(temp);
             }
-            catch/* (SerializationException)*/
+            catch
             {
-                //throw new Exception("客户端断开了连接");
                 throw;
             }
             return obj;
