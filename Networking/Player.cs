@@ -105,6 +105,18 @@ namespace Networking
         // socket 接收的超时长度；如果超过这个时长还收不到来自客户端的消息，则认为他断线了，抛出异常
         int m_receiveTimeOut = 10000;
 
+        /// <summary>
+        /// 测试用的
+        /// </summary>
+        /// <returns>字节数</returns>
+        public int Receive()
+        {
+            byte[] buffer = new byte[4096];
+            m_socket.ReceiveTimeout = 100;
+            int count= m_socket.Receive(buffer);
+            m_socket.ReceiveTimeout = 0;
+            return count;
+        }
 
         /// <summary>
         /// 获取特定频道的最早消息
@@ -497,6 +509,12 @@ namespace Networking
             m_inMessagePool.Add(message);
         }
 
+        /// <summary>
+        /// 清空在 socket 中的消息
+        /// </summary>
+        public void ClearMessage()
+        {
+        }
 
 
     }

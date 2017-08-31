@@ -227,7 +227,7 @@ namespace Server
         // 检查数据库连接辅助计时器
         Stopwatch m_checkConnectStopwatch;
         // 检查数据库连接延时（毫秒）
-        int m_checkConnectDelay = 30000;
+        int m_checkConnectDelay = 3000;
 
 
         /// <summary>
@@ -335,11 +335,11 @@ namespace Server
             {
                 if (sth == null)
                 {
-                    message =  thisPlayer.Respond(new Message("", channel));
+                    message = thisPlayer.Respond(new Message("", channel));
                 }
                 else
                 {
-                    message =  thisPlayer.Respond(new Message(sth, channel));
+                    message = thisPlayer.Respond(new Message(sth, channel));
                 }
             }
             // 可能是断线了
@@ -373,32 +373,30 @@ namespace Server
             {
                 int id = m_players[i].id;
                 tasks[i] = new Task(() => Respond(id, sth, channel));
-            }
-            //try
-            //{
-            //    // 等待所有发送操作完成
-            //    Task.WaitAll(tasks);
-            //}
-            //// 可能是其中一个客户端断线了；注意要用 AggregateException，捕获所有异常，可能有多个，只抓一个可能会导致崩溃
-            //catch (AggregateException ae)
-            //{
-            //    throw ae.Flatten();
-            //}
-            for (int i = 0; i < tasks.Length; i++)
-            {
                 tasks[i].Start();
             }
-            for (int i = 0; i < tasks.Length; i++)
+            try
             {
-                try
-                {
-                    tasks[i].Wait();
-                }
-                catch (AggregateException ae)
-                {
-                    throw ae.Flatten();
-                }
+                // 等待所有发送操作完成
+                Task.WaitAll(tasks);
             }
+            // 可能是其中一个客户端断线了；注意要用 AggregateException，捕获所有异常，可能有多个，只抓一个可能会导致崩溃
+            catch (AggregateException ae)
+            {
+
+                throw ae.Flatten();
+            }
+            //for (int i = 0; i < tasks.Length; i++)
+            //{
+            //    try
+            //    {
+            //        tasks[i].Wait();
+            //    }
+            //    catch (AggregateException ae)
+            //    {
+            //        throw ae.Flatten();
+            //    }
+            //}
 
             //for (int i = 0; i < m_players.Count; i++)
             //{
@@ -440,6 +438,7 @@ namespace Server
             catch (AggregateException ae)
             {
                 throw ae.Flatten();
+
             }
 
             //for (int i = 0; i < m_players.Count; i++)
@@ -481,6 +480,7 @@ namespace Server
             catch (AggregateException ae)
             {
                 throw ae.Flatten();
+
             }
             //object[] objs=Array.ConvertAll(tasks, task => task.Result);
             ////object[] objs = new object[m_players.Count];
@@ -557,7 +557,7 @@ namespace Server
         /// 检查有没有主动关闭连接的同学，关闭掉线同学的连接；可以加并行性
         /// </summary>
         /// <returns>检查出来的断线玩家个数</returns>
-        void HandleDisconnect()
+        int HandleDisconnect()
         {
             List<int> endServiceIds = new List<int>();
 
@@ -634,10 +634,20 @@ namespace Server
             Task.WaitAll(tasks);
             // 取消所有断线用户的服务
             endServiceIds = endServiceIds.Distinct().ToList();
+            int count = endServiceIds.Count;
             for (int i = 0; i < endServiceIds.Count; i++)
             {
                 EndService(endServiceIds[i]);
             }
+
+            // 紧急将断线人数发送到所有客户端
+            //EmergencyBroadcast(count);
+
+            //if (count > 0)
+            //{
+            //    throw new Exception("有玩家断线");
+            //}
+            return count;
         }
 
         /// <summary>
@@ -752,8 +762,6 @@ namespace Server
             // 设置 10 秒的连接数据库超时，增大房间连接上数据库的几率
             m_DBClient.Connect(10000);
 #endif
-
-
             MyConsole.Log("房间初始化完成", /*"Program",*/ MyConsole.LogType.Debug);
         }
 
@@ -766,52 +774,87 @@ namespace Server
             {
                 // 重置服务器
                 Reset();
+
+                List<int> temp = m_players.ConvertAll(player => player.id);
+
+                m_playerInfos.RemoveAll(info => temp.IndexOf(info.id) < 0);
             }
-
-            m_playerInfos.Clear();
-
-
-            // 首先更新主程序掌握的玩家列表
-            // 对每一个网络交流中的玩家
-            for (int i = 0; i < m_players.Count; i++)
+            // 如果玩家信息和玩家网络信息不一致
+            else if (m_players.Count > m_playerInfos.Count)
             {
-                Player comPlayer = m_players[i];
-                //// 检查是否已经更新到主程序
-                //int idx = m_players.FindIndex(player => player.id == comPlayer.id);
-                //// 如果还没有更新到主程序
-                //if (idx < 0)
-                //{
-                //    // 加入此玩家
-                //    m_players.Add(new PlayerInfo(comPlayer.name, comPlayer.id));
-                //    //// 加入此玩家的统计数据
-                //    //m_userStats.Add(new StatObject(comPlayer.name));
-                //    //// 将统计数据同步到玩家信息中
-                //    //m_userStats.Last().CopyTo(m_players.Last());
-                //}
-
-                m_playerInfos.Add(new PlayerInfo(comPlayer.name, comPlayer.id));
-
+                // 找到没有加入的玩家信息
+                List<int> temp = m_playerInfos.ConvertAll(player => player.id);
+                foreach (var thisPlayer in m_players.FindAll(player => temp.IndexOf(player.id) < 0))
+                {
+                    m_playerInfos.Add(new PlayerInfo(thisPlayer.name, thisPlayer.id));
 #if (DATABASE)
-                // 从数据库中获取该用户的信息
-                DataObject dataObj = m_DBClient.Find(statTableName, comPlayer.name);
-                StatObject statObj;
-                // 如果没有记录，说明这是一个新用户
-                if (dataObj == null)
-                {
-                    statObj = new StatObject();
-                    statObj.username = comPlayer.name;
-                    // 更新到数据库
-                    m_DBClient.Update(statTableName, statObj);
-                }
-                // 如果有记录，老玩家了
-                else
-                {
-                    statObj = new StatObject(dataObj);
-                }
-                // 更新到玩家信息当中
-                statObj.CopyTo(m_playerInfos.Last());
+                    // 从数据库中获取该用户的信息
+                    DataObject dataObj = m_DBClient.Find(statTableName, thisPlayer.name);
+                    StatObject statObj;
+                    // 如果没有记录，说明这是一个新用户
+                    if (dataObj == null)
+                    {
+                        statObj = new StatObject();
+                        statObj.username = thisPlayer.name;
+                        // 更新到数据库
+                        m_DBClient.Update(statTableName, statObj);
+                    }
+                    // 如果有记录，老玩家了
+                    else
+                    {
+                        statObj = new StatObject(dataObj);
+                    }
+                    // 更新到玩家信息当中
+                    statObj.CopyTo(m_playerInfos.Last());
 #endif
+                }
+
             }
+
+            //m_playerInfos.Clear();
+
+
+            //            // 首先更新主程序掌握的玩家列表
+            //            // 对每一个网络交流中的玩家
+            //            for (int i = 0; i < m_players.Count; i++)
+            //            {
+            //                Player comPlayer = m_players[i];
+            //                //// 检查是否已经更新到主程序
+            //                //int idx = m_players.FindIndex(player => player.id == comPlayer.id);
+            //                //// 如果还没有更新到主程序
+            //                //if (idx < 0)
+            //                //{
+            //                //    // 加入此玩家
+            //                //    m_players.Add(new PlayerInfo(comPlayer.name, comPlayer.id));
+            //                //    //// 加入此玩家的统计数据
+            //                //    //m_userStats.Add(new StatObject(comPlayer.name));
+            //                //    //// 将统计数据同步到玩家信息中
+            //                //    //m_userStats.Last().CopyTo(m_players.Last());
+            //                //}
+
+            //                m_playerInfos.Add(new PlayerInfo(comPlayer.name, comPlayer.id));
+
+            //#if (DATABASE)
+            //                // 从数据库中获取该用户的信息
+            //                DataObject dataObj = m_DBClient.Find(statTableName, comPlayer.name);
+            //                StatObject statObj;
+            //                // 如果没有记录，说明这是一个新用户
+            //                if (dataObj == null)
+            //                {
+            //                    statObj = new StatObject();
+            //                    statObj.username = comPlayer.name;
+            //                    // 更新到数据库
+            //                    m_DBClient.Update(statTableName, statObj);
+            //                }
+            //                // 如果有记录，老玩家了
+            //                else
+            //                {
+            //                    statObj = new StatObject(dataObj);
+            //                }
+            //                // 更新到玩家信息当中
+            //                statObj.CopyTo(m_playerInfos.Last());
+            //#endif
+            //            }
 
 
             //// 接收玩家发过来的玩家信息
@@ -2191,31 +2234,24 @@ namespace Server
 
                 }
 
-                // 如果玩家选择代理
-                if (isAutoPlay)
+                // 如果玩家选择代理；或时间不够
+                if (isAutoPlay || isTimeOut)
                 {
                     // 自动出牌
                     m_dealCards = m_dealer.AutoHandOut(/*m_dealer.currentPlayerId*/);
+                    // 将选牌发到客户端
+                    Respond(m_dealer.currentPlayerId, Card.ToInt(m_dealCards));
                 }
-                else// 如果玩家没有代理
+                else// 如果玩家还有剩余思考时间；也没有选择代理
                 {
-                    // 如果玩家已经没有剩余时间思考
-                    if (isTimeOut)
-                    {
-                        // 自动出牌
-                        m_dealCards = m_dealer.AutoHandOut(/*m_dealer.currentPlayerId*/);
-                    }
-                    else// 如果玩家还有剩余思考时间
-                    {
-                        // 接受他选择的出牌
-                        //object temp = Serializer.Receive(m_players[m_dealer.currentPlayerId].socket);
-                        //Card[] m_dealCards = Card.ToCard((int[])temp);
+                    // 接受他选择的出牌
+                    //object temp = Serializer.Receive(m_players[m_dealer.currentPlayerId].socket);
+                    //Card[] m_dealCards = Card.ToCard((int[])temp);
 
-                        //m_dealCards = Card.ToCard((int[])Respond(m_players[m_dealer.currentPlayerId].socket, "收到出牌"));
-                        m_dealCards = Card.ToCard((int[])Respond(m_dealer.currentPlayerId, "收到出牌"));
-                    }
+                    //m_dealCards = Card.ToCard((int[])Respond(m_players[m_dealer.currentPlayerId].socket, "收到出牌"));
+                    m_dealCards = Card.ToCard((int[])Respond(m_dealer.currentPlayerId, "收到出牌"));
                 }
-
+                Judgement judgement;
                 // 如果有出牌
                 if (m_dealCards.Length > 0)
                 {
@@ -2223,19 +2259,19 @@ namespace Server
                     Card.PrintDeck(m_dealCards);
 
                     // 用来判断出牌合法性的所有信息都包含在 Dealer 里头
-                    Judgement judgement = m_dealer.IsLegalDeal(/*m_players.ToArray(), */m_dealCards);
+                    judgement = m_dealer.IsLegalDeal(/*m_players.ToArray(), */m_dealCards);
                     Console.Write(judgement.isValid);
                     Console.Write(' ');
                     Console.WriteLine(judgement.message);
 
                     // 当玩家是自主行动，不是代理出牌
-                    if (!isTimeOut && !isAutoPlay)
-                    {
-                        // 先把合法性判断返回客户端
-                        // 一定要保证 Receive 和 Send 操作之间, 没有其他网络通信
-                        //Respond(m_players[m_dealer.currentPlayerId].socket, judgement);
-                        Respond(m_dealer.currentPlayerId, judgement);
-                    }
+                    //if (!isTimeOut && !isAutoPlay)
+                    //{
+                    // 先把合法性判断返回客户端
+                    // 一定要保证 Receive 和 Send 操作之间, 没有其他网络通信
+                    //Respond(m_players[m_dealer.currentPlayerId].socket, judgement);
+                    Respond(m_dealer.currentPlayerId, judgement);
+                    //}
 
                     // 如果出牌合法
                     if (judgement.isValid)
@@ -2252,7 +2288,7 @@ namespace Server
                         //    m_players[m_dealer.currentPlayerId].cardInHand.Remove(m_dealCards[j]);
                         //}
 
-                        m_dealer.HandOut(m_dealer.currentPlayerId, m_dealCards);
+                        m_dealer.HandOut(/*m_dealer.currentPlayerId,*/ m_dealCards);
 
                         // 如果这是首家
                         // 测试：直接假定 ID=0 的玩家是首家
@@ -2267,6 +2303,20 @@ namespace Server
                         // 更新庄家
                         m_dealer.UpdateBankerFight(m_dealCards);
                     }
+                    // 如果甩牌失败；并且现在是首家出牌
+                    else if (judgement.message == "throwFail" && m_dealer.IsFisrtPlayerPlaying())
+                    {
+                        // 获取玩家出牌中的最小的牌
+                        Card minCard = m_dealer.GetMinCard(m_dealCards);
+                        // 将这张牌作为首家的出牌
+                        m_dealCards = new Card[1] { minCard };
+                        // 自动帮他出了这张牌
+                        m_dealer.HandOut(m_dealCards);
+                        // 更新庄家；可能有出信号牌哦
+                        m_dealer.UpdateBankerFight(m_dealCards);
+                        // 重置思考计时器
+                        m_handOutStopwatch.Reset();
+                    }
                     // 向出牌玩家发送手牌
                     // 如果出牌合法，这手牌有所减少；否则，手牌没有改变
                     //Respond(m_players[m_dealer.currentPlayerId].socket, Card.ToInt(m_players[m_dealer.currentPlayerId].playerInfo.cardInHand));
@@ -2279,90 +2329,7 @@ namespace Server
                     //    //Respond(m_players[i].socket, judgement.isValid);
                     //    Respond(i, judgement.isValid);
                     //}
-                    Broadcast(judgement.isValid);
-                    if (judgement.isValid)
-                    {
-                        // 向所有玩家发送该玩家的出牌
-                        //for (int j = 0; j < m_playerInfos.Count; j++)
-                        //{
-                        //    // 先发送 ID
-                        //    //Respond(m_players[j].socket, m_players[m_dealer.currentPlayerId].playerInfo.id);
-                        //    Respond(j, m_playerInfos[m_dealer.currentPlayerId].id);
 
-                        //    // 再发送出牌
-                        //    //Respond(m_players[j].socket, Card.ToInt(m_dealCards));
-                        //    Respond(j, Card.ToInt(m_dealCards));
-
-                        //    // 发送当前庄家 ID；因为有可能有人出了信号牌，和原来的庄家成了朋友
-                        //    Respond(j, m_dealer.bankerPlayerId.ToArray());
-                        //}
-                        // 先发送 ID
-                        Broadcast(m_dealer.currentPlayerId);
-                        // 再发送出牌
-                        Broadcast(Card.ToInt(m_dealCards));
-                        // 发送当前庄家 ID；因为有可能有人出了信号牌，和原来的庄家成了朋友
-                        Broadcast(m_dealer.bankerPlayerId.ToArray());
-                        // 存储出牌到荷官
-                        m_dealer.handOutCards[m_dealer.currentPlayerId] = new List<Card>(m_dealCards);
-
-                        //// 如果最后一个玩家出牌
-                        //if (m_dealer.handOutPlayerCount == 0)
-                        //{
-                        //    // 标志需要 1 次延时
-                        //    m_doneClearPlayCardDelay = false;
-                        //    // 清空荷官中存储的本轮玩家出牌
-                        //    m_dealer.ClearHandOutCards();
-                        //    // 进入下一轮出牌
-                        //    m_dealer.circle++;
-                        //}
-                        // 下一玩家出牌
-                        m_dealer.handOutPlayerCount++;
-
-                        // 如果最后一个玩家出牌
-                        if (m_dealer.handOutPlayerCount == 0)
-                        {
-                            // 更新首家
-                            m_dealer.UpdateFirstHome();
-
-
-                            // 先计算分数
-                            m_dealer.addScore();
-
-                            // 标志需要 1 次延时
-                            m_doneClearPlayCardDelay = false;
-                            // 清空荷官中存储的本轮玩家出牌
-                            m_dealer.ClearHandOutCards();
-                            // 进入下一轮出牌
-                            m_dealer.circle++;
-                            // 最后一轮
-                            //if (m_dealer.AllPlayersHandEmpty())
-                            //    m_dealer.addLevel();
-                            //else
-
-
-
-                            //// 将玩家分数更新到主线程
-                            //for (int i = 0; i < m_dealer.score.Length; i++)
-                            //{
-                            //    m_players[i].score = m_dealer.score[i];
-                            //}
-                        }
-
-
-                        // 必须保证首家 ID 已经确定了，才能更新下一出牌玩家 ID
-                        m_dealer.UpdateNextPlayer();
-
-                        // 将分数同步到客户端
-                        Broadcast(m_dealer.score);
-
-                        // 标志可以开始为下一玩家出牌思考计时
-                        m_isOkCountDown = true;
-                    }
-                    // 否则, 还是同一玩家出牌
-                    else
-                    {
-
-                    }
                 }
                 else// 否则如果玩家还没有出牌
                 {
@@ -2373,12 +2340,99 @@ namespace Server
                     //    Respond(i, false);
 
                     //}
-                    Broadcast(false);
+                    //Broadcast(false);
                     // 继续计时
                     // 如果已经
-
+                    judgement = new Judgement("玩家还没有出牌", false);
 
                 }
+                // 设置是否同步出牌 flag
+                bool flag = m_dealCards.Length > 0 && (judgement.isValid || (judgement.message == "throwFail" && m_dealer.IsFisrtPlayerPlaying()));
+                // 向所有客户端发送
+                Broadcast(flag);
+                if (flag)
+                {
+                    // 向所有玩家发送该玩家的出牌
+                    //for (int j = 0; j < m_playerInfos.Count; j++)
+                    //{
+                    //    // 先发送 ID
+                    //    //Respond(m_players[j].socket, m_players[m_dealer.currentPlayerId].playerInfo.id);
+                    //    Respond(j, m_playerInfos[m_dealer.currentPlayerId].id);
+
+                    //    // 再发送出牌
+                    //    //Respond(m_players[j].socket, Card.ToInt(m_dealCards));
+                    //    Respond(j, Card.ToInt(m_dealCards));
+
+                    //    // 发送当前庄家 ID；因为有可能有人出了信号牌，和原来的庄家成了朋友
+                    //    Respond(j, m_dealer.bankerPlayerId.ToArray());
+                    //}
+                    // 先发送 ID
+                    Broadcast(m_dealer.currentPlayerId);
+                    // 再发送出牌
+                    Broadcast(Card.ToInt(m_dealCards));
+                    // 发送当前庄家 ID；因为有可能有人出了信号牌，和原来的庄家成了朋友
+                    Broadcast(m_dealer.bankerPlayerId.ToArray());
+                    // 存储出牌到荷官
+                    m_dealer.handOutCards[m_dealer.currentPlayerId] = new List<Card>(m_dealCards);
+
+                    //// 如果最后一个玩家出牌
+                    //if (m_dealer.handOutPlayerCount == 0)
+                    //{
+                    //    // 标志需要 1 次延时
+                    //    m_doneClearPlayCardDelay = false;
+                    //    // 清空荷官中存储的本轮玩家出牌
+                    //    m_dealer.ClearHandOutCards();
+                    //    // 进入下一轮出牌
+                    //    m_dealer.circle++;
+                    //}
+                    // 下一玩家出牌
+                    m_dealer.handOutPlayerCount++;
+
+                    // 如果最后一个玩家出牌
+                    if (m_dealer.handOutPlayerCount == 0)
+                    {
+                        // 更新首家
+                        m_dealer.UpdateFirstHome();
+
+                        // 先计算分数
+                        m_dealer.addScore();
+
+                        // 标志需要 1 次延时
+                        m_doneClearPlayCardDelay = false;
+                        // 清空荷官中存储的本轮玩家出牌
+                        m_dealer.ClearHandOutCards();
+                        // 进入下一轮出牌
+                        m_dealer.circle++;
+                        // 最后一轮
+                        //if (m_dealer.AllPlayersHandEmpty())
+                        //    m_dealer.addLevel();
+                        //else
+
+
+
+                        //// 将玩家分数更新到主线程
+                        //for (int i = 0; i < m_dealer.score.Length; i++)
+                        //{
+                        //    m_players[i].score = m_dealer.score[i];
+                        //}
+                    }
+
+
+                    // 必须保证首家 ID 已经确定了，才能更新下一出牌玩家 ID
+                    m_dealer.UpdateNextPlayer();
+
+                    // 将分数同步到客户端
+                    Broadcast(m_dealer.score);
+
+                    // 标志可以开始为下一玩家出牌思考计时
+                    m_isOkCountDown = true;
+                }
+                // 否则, 还是同一玩家出牌
+                else
+                {
+
+                }
+
                 // 还是同一玩家出牌
             }
             else// 如果需要延迟
@@ -2934,13 +2988,45 @@ namespace Server
                                 }
                                 break;
                         }
+
                     }
+                    //catch (AggregateException ae)
+                    //{
+                    //    // 可能是断线了
+                    //    MyConsole.Log("主循环异步通信异常");
+
+                    //    foreach (var ex in ae.InnerExceptions)
+                    //    {
+                    //        // Get stack trace for the exception with source file information
+                    //        var st = new StackTrace(ex, true);
+
+                    //        StackFrame[] frames = st.GetFrames();
+
+                    //        for (int i = 0; i < frames.Length; i++)
+                    //        {
+                    //            MyConsole.Log(frames[i].ToString());
+                    //        }
+
+                    //        MyConsole.Log(ex.Message);
+                    //    }
+
+                    //    // 向所有玩家发送紧急通告
+                    //    EmergencyBroadcast("有玩家断线");
+                    //    // 重新设置游戏为准备中状态
+                    //    m_gameStateMachine.Update(GameStateMachine.State.GetReady);
+
+                    //    //// Get the line number from the stack frame
+                    //    //var line = frame.GetFileLineNumber();
+
+                    //    //MyConsole.Log(string.Format("{0}行 - {1}", line, ex.Message));
+                    //    // 重置服务器
+                    //    Reset();
+
+                    //}
                     catch (AggregateException ae)
                     {
-                        // 可能是断线了
-                        MyConsole.Log("主循环异步通信异常");
-
-                        foreach (var ex in ae.InnerExceptions)
+                        MyConsole.Log("主循环异常");
+                        foreach (var ex in ae.Flatten().InnerExceptions)
                         {
                             // Get stack trace for the exception with source file information
                             var st = new StackTrace(ex, true);
@@ -2955,8 +3041,15 @@ namespace Server
                             MyConsole.Log(ex.Message);
                         }
 
+                        //// 检查一下 socket 里面还有没有消息没读完
+                        //for (int i = 0; i < m_players.Count; i++)
+                        //{
+                        //    MyConsole.Log(string.Format("玩家 ID = {0}；socket 内字节：{1}", m_players[i].id, m_players[i].Receive()));
+                        //}
+
+
                         // 向所有玩家发送紧急通告
-                        EmergencyBroadcast("有玩家断线");
+                        //EmergencyBroadcast("有玩家断线");
                         // 重新设置游戏为准备中状态
                         m_gameStateMachine.Update(GameStateMachine.State.GetReady);
 
@@ -2966,11 +3059,11 @@ namespace Server
                         //MyConsole.Log(string.Format("{0}行 - {1}", line, ex.Message));
                         // 重置服务器
                         Reset();
-
                     }
+                    // 其他异常
                     catch (Exception ex)
                     {
-                        MyConsole.Log("主循环其他异常");
+                        MyConsole.Log("主循环异常");
                         // Get stack trace for the exception with source file information
                         var st = new StackTrace(ex, true);
 
@@ -2982,9 +3075,6 @@ namespace Server
                         }
 
                         MyConsole.Log(ex.Message);
-                        // 向所有玩家发送紧急通告
-                        EmergencyBroadcast("有玩家断线");
-                        // 重新设置游戏为准备中状态
                         m_gameStateMachine.Update(GameStateMachine.State.GetReady);
 
                         //// Get the line number from the stack frame
@@ -2999,7 +3089,30 @@ namespace Server
 
                     }
                     // 处理断线
-                    HandleDisconnect();
+                    int disconnectCount = HandleDisconnect();
+
+                    // 紧急广播断线人数
+                    try
+                    {
+                        Broadcast(disconnectCount);
+                    }
+                    catch
+                    {
+
+                    }
+
+                    if (disconnectCount > 0)
+                    {
+                        // 重新设置游戏为准备中状态
+                        m_gameStateMachine.Update(GameStateMachine.State.GetReady);
+
+                        //// Get the line number from the stack frame
+                        //var line = frame.GetFileLineNumber();
+
+                        //MyConsole.Log(string.Format("{0}行 - {1}", line, ex.Message));
+                        // 重置服务器
+                        Reset();
+                    }
 
 
                     // 向客户端广播其他玩家的逃跑消息

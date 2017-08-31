@@ -34,11 +34,13 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="DatabaseUtility">
-      <HintPath>..\Plugins\DatabaseUtility.dll</HintPath>
+    <Reference Include="DatabaseUtility, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\Database-Prototype\Database\Database\bin\Debug\DatabaseUtility.dll</HintPath>
     </Reference>
-    <Reference Include="DBNetworking">
-      <HintPath>..\Plugins\DBNetworking.dll</HintPath>
+    <Reference Include="DBNetworking, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\Database-Prototype\Database\Database\bin\Debug\DBNetworking.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

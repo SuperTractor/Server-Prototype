@@ -1088,10 +1088,6 @@ namespace GameUtility
 
         // 全牌: 全部 4 副牌
         private Card[] m_totalCard;
-        public Card[] totalCard
-        {
-            get { return m_totalCard; }
-        }
         // 8 张底牌
         private Card[] m_bottom;
         // 分发给玩家的手牌
@@ -2684,7 +2680,7 @@ namespace GameUtility
 
 
         // CardArray到CardList的转换
-        public Card[] CardListToCardArray(CardList res)
+        Card[] CardListToCardArray(CardList res)
         {
             int count = 0;
             for (int i = 0; i < 54; i++)
@@ -2694,35 +2690,35 @@ namespace GameUtility
             // 如果 count = -1，则输出各玩家的手牌，人可读的，和机器可读的
             if (count < 0)
             {
-                //Console.WriteLine(count);
+                Console.WriteLine(count);
 
-                //Console.WriteLine(string.Format("当前主花色 {0}，主级数 {1}", GetMainSuit(), mainNumber));
+                Console.WriteLine(string.Format("当前主花色 {0}，主级数 {1}", GetMainSuit(), mainNumber));
 
-                //Console.WriteLine(string.Format("当前出牌玩家 {0}，首家 {1}", m_currentPlayerId, firstHomePlayerId));
+                Console.WriteLine(string.Format("当前出牌玩家 {0}，首家 {1}", m_currentPlayerId, firstHomePlayerId));
 
-                //for (int i = 0; i < handOutCards.Length; i++)
-                //{
-                //    Console.WriteLine(string.Format("玩家 {0} 的出牌", i));
-                //    Card.PrintDeck(handOutCards[i]);
-                //    int[] cards = Card.ToInt(handOutCards[i]);
-                //    for (int j = 0; j < cards.Length; j++)
-                //    {
-                //        Console.Write(string.Format("{0} ", cards[j]));
-                //    }
-                //    Console.WriteLine();
-                //}
+                for (int i = 0; i < handOutCards.Length; i++)
+                {
+                    Console.WriteLine(string.Format("玩家 {0} 的出牌", i));
+                    Card.PrintDeck(handOutCards[i]);
+                    int[] cards = Card.ToInt(handOutCards[i]);
+                    for (int j = 0; j < cards.Length; j++)
+                    {
+                        Console.Write(string.Format("{0} ", cards[j]));
+                    }
+                    Console.WriteLine();
+                }
 
-                //for (int i = 0; i < playersHandCard.Length; i++)
-                //{
-                //    Console.WriteLine(string.Format("玩家 {0} 的手牌", i));
-                //    Card.PrintDeck(playersHandCard[i]);
-                //    int[] cards = Card.ToInt(playersHandCard[i]);
-                //    for (int j = 0; j < cards.Length; j++)
-                //    {
-                //        Console.Write(string.Format("{0} ", cards[j]));
-                //    }
-                //    Console.WriteLine();
-                //}
+                for (int i = 0; i < playersHandCard.Length; i++)
+                {
+                    Console.WriteLine(string.Format("玩家 {0} 的手牌", i));
+                    Card.PrintDeck(playersHandCard[i]);
+                    int[] cards = Card.ToInt(playersHandCard[i]);
+                    for (int j = 0; j < cards.Length; j++)
+                    {
+                        Console.Write(string.Format("{0} ", cards[j]));
+                    }
+                    Console.WriteLine();
+                }
 
             }
 
@@ -3959,7 +3955,6 @@ namespace GameUtility
                                         maxh = fc.Count / s;
 
                                     // 检查出牌的副牌段
-                                    ctn = 0;
                                     for (int i = 0; i < 13; i++)
                                         if (i != mainNumber)
                                         {
@@ -4162,7 +4157,6 @@ namespace GameUtility
                                         maxh = fc.Count / s;
 
                                     // 检查出牌的副牌段
-                                    ctn = 0;
                                     for (int i = 0; i < 13; i++)
                                         if (i != mainNumber)
                                         {
@@ -4339,7 +4333,7 @@ namespace GameUtility
                                     {
                                         bool flag = false;
                                         for (int k = firstColor * 13; k < (firstColor + 1) * 13; k++)
-                                            if (playCard.data[k] >= sameLevel && (k % 13) != mainNumber)
+                                            if (playCard.data[k] >= sameLevel && (k & 13) != mainNumber)
                                             {
                                                 playCard.data[k] -= sameLevel;
                                                 ac += sameLevel;
@@ -4685,7 +4679,6 @@ namespace GameUtility
                                     maxh = fc.Count / 2;
 
                                 // 检查出牌的副牌段
-                                ctn = 0;
                                 for (int i = 0; i < 13; i++)
                                     if (i != mainNumber)
                                     {
@@ -4870,15 +4863,14 @@ namespace GameUtility
                                 // 判断垫牌是否合法
                                 int tmp1 = 0, tmp2 = 0;
                                 for (i = 0; i < 13; i++)
-                                    if (i!=mainNumber)
                                 {
                                     tmp1 += handCard.data[i + mainColor * 13];
                                     tmp2 += playCard.data[i + mainColor * 13];
                                 }
                                 for (i = 0; i < 4; i++)
                                 {
-                                    tmp1 += handCard.data[i * 13 + mainNumber];
-                                    tmp2 += playCard.data[i * 13 + mainNumber];
+                                    tmp1 += handCard.data[i * mainColor + mainNumber];
+                                    tmp2 += playCard.data[i * mainColor + mainNumber];
                                 }
                                 for (i = 52; i < 54; i++)
                                 {
@@ -4921,7 +4913,6 @@ namespace GameUtility
                                 if (maxh >= fc.Count / 2)
                                     maxh = fc.Count / 2;
 
-                                ctn = 0;
                                 // 检查出牌的副牌段
                                 for (int i = 0; i < 13; i++)
                                     if (i != mainNumber)
@@ -5088,6 +5079,17 @@ namespace GameUtility
 #endif
         }
 
+        /// <summary>
+        /// 用于首家甩牌失败时，选取他的出牌中最小的一张牌
+        /// </summary>
+        /// <param name="cards">首家的出牌</param>
+        /// <returns>最小的一张牌</returns>
+        public Card GetMinCard(Card[] cards)
+        {
+            return cards[0];
+        }
+
+
         // 判断是否所有玩家的手牌为空
         public bool AllPlayersHandEmpty()
         {
@@ -5174,7 +5176,7 @@ namespace GameUtility
                 }
 
             }
-            if (now + fccount - done > l.Length-1)
+            if (now + fccount - done >= l.Length)
             {
                 CardList pC = new CardList();
                 pC.data[0] = -1;
@@ -5192,19 +5194,14 @@ namespace GameUtility
             return pc;
         }
 
-        /// <summary>
-        /// 用于首家甩牌失败时，选取他的出牌中最小的一张牌
-        /// </summary>
-        /// <param name="cards">首家的出牌</param>
-        /// <returns>最小的一张牌</returns>
-        public Card GetMinCard(Card[] cards)
+        // 甩牌失败，自动出小
+        public Card AutoFailThrow(Card[] cards)
         {
             score[currentPlayerId] -= cards.Length * 10;
             penalty[currentPlayerId] += cards.Length * 10;
 
             CardList playCard = CardArrayToCardList(cards);
-            int min = cards[0].CardToIndex();
-
+            int min = 53;
             for (int i = 0; i < 54; i++)
                 if (playCard.data[i] > 0 && biggerThan(min, i, mainColor, mainNumber))
                     min = i;
@@ -5280,7 +5277,7 @@ namespace GameUtility
                                 int[] l = new int[] { mainNumber, 13 + mainNumber, 2 * 13 + mainNumber, 3 * 13 + mainNumber, 52, 53 };
                                 for (int i = 0; i < 6; i++)
                                 {
-                                    ans.data[l[i]] = handCard.data[l[i]];
+                                    ans.data[i] = handCard.data[l[i]];
                                     handCard.data[l[i]] = 0;
                                 }
                             }
@@ -5302,7 +5299,7 @@ namespace GameUtility
                                 int[] l = new int[] { mainNumber, 13 + mainNumber, 2 * 13 + mainNumber, 3 * 13 + mainNumber, 52, 53 };
                                 for (int i = 0; i < 6; i++)
                                 {
-                                    ans.data[l[i]] = handCard.data[l[i]];
+                                    ans.data[i] = handCard.data[l[i]];
                                     handCard.data[l[i]] = 0;
                                 }
                                 for (int i = 0; i < 13; i++)
