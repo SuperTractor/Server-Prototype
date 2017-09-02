@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-
 namespace GameUtility
 {
     [Serializable]
@@ -22,13 +21,11 @@ namespace GameUtility
             suit = _suit;
             points = _points;
         }
-
         public Card(int _suit, int _points)
         {
             suit = (Suit)_suit;
             points = _points;
         }
-
         // 获取 1 副牌
         public static Card[] GetCardSet()
         {
@@ -47,7 +44,6 @@ namespace GameUtility
             card_set[53] = new Card(Suit.Joker1, 13);
             return card_set;
         }
-
         // Rule:求单张卡对应下标
         public int CardToIndex()
         {
@@ -63,7 +59,6 @@ namespace GameUtility
             else
                 return 53;
         }
-
         // Card 数组转 4 副牌 int 数组
         public static int[] ToInt(Card[] cards)
         {
@@ -88,7 +83,6 @@ namespace GameUtility
             }
             return ints;
         }
-
         // Card 数组转 4 副牌 int 数组
         public static int[] ToInt(List<Card> cards)
         {
@@ -113,7 +107,6 @@ namespace GameUtility
             }
             return ints;
         }
-
         // 4 副牌 int 数组转 Card 数组
         public static Card[] ToCard(int[] ints)
         {
@@ -140,11 +133,9 @@ namespace GameUtility
             }
             return cards;
         }
-
         override public string ToString()
         {
             string suit_string = "", points_string = "";
-
             switch (suit)
             {
                 case Suit.Club:
@@ -194,7 +185,6 @@ namespace GameUtility
             }
             return "(" + suit_string + points_string + ")";
         }
-
         static public void PrintDeck(Card[] deck)
         {
             for (int j = 0; j < deck.Length; j++)
@@ -211,7 +201,6 @@ namespace GameUtility
             }
             Console.WriteLine();
         }
-
         static public void PrintDeck(List<Card> deck)
         {
             for (int j = 0; j < deck.Count; j++)
@@ -225,7 +214,6 @@ namespace GameUtility
                 {
                     Console.Write("{0}{1}\t", j, deck[j]);
                 }
-
             }
             Console.WriteLine();
         }
@@ -239,7 +227,6 @@ namespace GameUtility
             }
             return display_str;
         }
-
         public bool Equals(Card other)
         {
             if (other == null) return false;
@@ -266,9 +253,7 @@ namespace GameUtility
                 else
                     return c1.points == c2.points && c1.suit == c2.suit;
             }
-
         }
-
         public static bool operator !=(Card c1, Card c2)
         {
             return !(c1 == c2);
@@ -276,9 +261,7 @@ namespace GameUtility
         // 延迟输出牌组, 用于抢底时, 显示手牌, 模拟摸牌效果
         static public void DelayPrint(List<Card> deck, int milliseconds)
         {
-
         }
-
         public static void Shuffle(Card[] cards)
         {
             Random rnd = new Random();
@@ -292,7 +275,5 @@ namespace GameUtility
                 cards[rand_idx] = temp;
             }
         }
-
-
     }
 }

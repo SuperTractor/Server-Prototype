@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using DatabaseUtility;
 using GameUtility;
-
 namespace Server
 {
     /// <summary>
@@ -18,7 +17,6 @@ namespace Server
         {
             get
             {
-
                 return (string)Get("password");
             }
             set
@@ -26,12 +24,10 @@ namespace Server
                 Set("password", value);
             }
         }
-
         public string nickname
         {
             get
             {
-
                 return (string)Get("nickname");
             }
             set
@@ -39,12 +35,10 @@ namespace Server
                 Set("nickname", value);
             }
         }
-
         public string headImageName
         {
             get
             {
-
                 return (string)Get("headImageName");
             }
             set
@@ -57,7 +51,6 @@ namespace Server
         {
             get
             {
-
                 return (int)Get("experience");
             }
             set
@@ -70,7 +63,6 @@ namespace Server
         {
             get
             {
-
                 return (string)Get("title");
             }
             set
@@ -83,7 +75,6 @@ namespace Server
         {
             get
             {
-
                 return (bool)Get("isOnline");
             }
             set
@@ -91,7 +82,6 @@ namespace Server
                 Set("isOnline", value);
             }
         }
-
         public UserObject()
         {
             variables.Add(new NamedVariable("password", "string"));
@@ -100,7 +90,6 @@ namespace Server
             variables.Add(new NamedVariable("experience", "int"));
             variables.Add(new NamedVariable("title", "string"));
             variables.Add(new NamedVariable("isOnline", "bool"));
-
             // 初始化
             password = "";
             nickname = "玩家";
@@ -109,12 +98,10 @@ namespace Server
             title = "";
             isOnline = false;
         }
-
         public UserObject(DataObject dataObj)
         {
             variables = new List<NamedVariable>(dataObj.variables);
         }
-
         // 将用户信息复制到玩家信息
         public void CopyTo(PlayerInfo info)
         {
@@ -125,7 +112,6 @@ namespace Server
             info.title = title;
             info.isOnline = isOnline;
         }
-
         // 将玩家信息复制到用户信息
         public void CopyFrom(PlayerInfo info)
         {

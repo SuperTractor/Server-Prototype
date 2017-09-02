@@ -1,6 +1,5 @@
 ﻿//#define ALI
 #undef ALI
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,14 +11,12 @@ using ConsoleUtility;
 using DBNetworking;
 using Networking;
 using System.Diagnostics;
-
 namespace Server
 {
     // 服务器专用交流接口
     // channel = 0 -> 用于正常沟通的网络通信频道
     // channel = 1 -> 用于通知断线的网络通信频道
     // channel = 2 -> 用于登录的网络通信频道
-
     public class ComServer
     {
         // 服务的端口
@@ -38,7 +35,6 @@ namespace Server
         static int m_requiredNumber;
         // 分发给玩家的 ID 卡；玩家连接上服务器后，发他一个；如果他断线了，我们就收回来，待会发给其他人
         static List<int> m_idCards;
-
         // 游戏客户端列表
         static List<Player> m_players;
         public static List<Player> players
@@ -48,46 +44,36 @@ namespace Server
                 return m_players;
             }
         }
-
         // 观战客户端列表
         static List<Player> m_watchPlayers = new List<Player>();
         public static List<Player> watchPlayers
         {
             get { return m_watchPlayers; }
         }
-
-
         //// 客户端的 socket 列表
         //public static List<Socket> clientSockets = new List<Socket>();
         //// 指示客户端当前是否连接上服务器的标志
         //public static List<bool> clientIsConnected = new List<bool>();
         //// 指示用户 ID 的列表
         //public static List<int> clientIds = new List<int>();
-
         //// 客户端的 socket 列表
         //public static Socket[] clientSockets;
-
         //// 指示客户端当前是否连接上服务器的标志
         //public static bool[] clientIsConnected;
-
         // 断线客户端 ID 列表
         public static List<int> disconnectClientIds;
-
         // 指示正在等待客户端连接服务器的事件
         private static ManualResetEvent m_waitingCustomerEvent = new ManualResetEvent(false);
         public static ManualResetEvent waitingCustomerEvent
         {
             get { return m_waitingCustomerEvent; }
         }
-
         // 指示完成接待客户端连接服务器的事件
         private static ManualResetEvent m_doneReceptEvent = new ManualResetEvent(false);
         public static ManualResetEvent doneReceptEvent
         {
             get { return m_doneReceptEvent; }
         }
-
-
         // 指示完成处理断线工作的事件
         // 设初始为true，使得首先触发 游戏 线程启动
         private static AutoResetEvent m_doneHandleDisconnect = new AutoResetEvent(true);
@@ -95,42 +81,31 @@ namespace Server
         {
             get { return m_doneHandleDisconnect; }
         }
-
-
         private static AutoResetEvent m_doneGameLoopEvent;
-
         // 游戏准备好的事件
         private static AutoResetEvent m_gameReadyEvent = new AutoResetEvent(false);
         public static AutoResetEvent gameReadyEvent
         {
             get { return m_gameReadyEvent; }
         }
-
         // 存放游戏进程和断线处理进程
         static AutoResetEvent[] m_events = new AutoResetEvent[2];
-
         //static string m_statTableName = "stat";
-
         // 记录断线玩家的用户名；主线程会根据这个记录来修改逃跑次数
         public static List<string> abnormallyDisconnectedUserNames = new List<string>();
-
         // 房间 ID 列表
         static List<string> m_roomIds = new List<string>();
         // 房间 ID 数位
         static int m_roomIdLength = 6;
-
         // 房间（服务）列表
         static List<RoomService> m_rooms = new List<RoomService>();
-
         // 获取本机地址
         static IPAddress GetLocalAddress()
         {
-
 #if (ALI)
             return IPAddress.Parse(Console.ReadLine());
 #else
             var host = Dns.GetHostEntry(Dns.GetHostName());
-
             for (int i = host.AddressList.Length - 1; i >= 0; i--)
             {
                 if (host.AddressList[i].AddressFamily == AddressFamily.InterNetwork)
@@ -138,7 +113,6 @@ namespace Server
                     return host.AddressList[i];
                 }
             }
-
             //foreach (var ip in host.AddressList)
             //{
             //    if (ip.AddressFamily == AddressFamily.InterNetwork)
@@ -148,10 +122,7 @@ namespace Server
             //}
             throw new Exception("没有找到 IP 地址");
 #endif
-
         }
-
-
         /// <summary>
         /// 初始化函数
         /// </summary>
@@ -161,7 +132,6 @@ namespace Server
             //clientIsConnected = new bool[capacity];
             //clientSockets = new Socket[capacity];
             //disconnectClientIds = new List<int>();
-
             m_capacity = capacity;
             m_requiredNumber = requiredNumber;
             // 初始化客户端列表
@@ -170,21 +140,17 @@ namespace Server
             disconnectClientIds = new List<int>();
             // 初始化 socket
             //m_ip = IPAddress.Parse(m_ipStr);
-
             // 获取本机地址
             m_ip = GetLocalAddress();
-
             m_socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             m_socket.Bind(new IPEndPoint(m_ip, m_port));
             m_socket.Listen(m_backlog);
             // 初始化用户 ID 卡
             m_idCards = new List<int>(Enumerable.Range(0, capacity));
-
             // 初始化房间 ID 列表
             List<int> tempRoomIds = new List<int>(Enumerable.Range(0, (int)Math.Pow(10, m_roomIdLength)));
             // 数字左端端填充 0 
             m_roomIds = tempRoomIds.ConvertAll(id => id.ToString().PadLeft(m_roomIdLength, '0'));
-
             //Console.WriteLine("启动监听{0}成功", m_socket.LocalEndPoint.ToString());
             MyConsole.Log("启动监听" + m_socket.LocalEndPoint.ToString() + "成功",/* "ComServer",*/ MyConsole.LogType.Debug);
             // 引用传进来的事件
@@ -193,7 +159,6 @@ namespace Server
             m_events[0] = m_doneGameLoopEvent;
             m_events[1] = m_doneHandleDisconnect;
         }
-
         public static void Initialize(int playerNumber)
         {
             m_requiredNumber = playerNumber;
@@ -203,10 +168,8 @@ namespace Server
             disconnectClientIds = new List<int>();
             // 初始化 socket
             //m_ip = IPAddress.Parse(m_ipStr);
-
             // 获取本机地址
             m_ip = GetLocalAddress();
-
             m_socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             m_socket.Bind(new IPEndPoint(m_ip, m_port));
             m_socket.Listen(m_backlog);
@@ -214,12 +177,9 @@ namespace Server
             List<int> tempRoomIds = new List<int>(Enumerable.Range(0, (int)Math.Pow(10, m_roomIdLength)));
             // 数字左端端填充 0 
             m_roomIds = tempRoomIds.ConvertAll(id => id.ToString().PadLeft(m_roomIdLength, '0'));
-
             //Console.WriteLine("启动监听{0}成功", m_socket.LocalEndPoint.ToString());
             MyConsole.Log("启动监听" + m_socket.LocalEndPoint.ToString() + "成功",/* "ComServer",*/ MyConsole.LogType.Debug);
-
         }
-
         public static object Respond(int playerId, object sth, int channel = 0)
         {
             Player thisPlayer = m_players.Find(player => player.id == playerId);
@@ -241,7 +201,6 @@ namespace Server
             }
             return message.data;
         }
-
         // 向所有客户端广播
         public static void Broadcast(object sth, int channel = 0)
         {
@@ -262,7 +221,6 @@ namespace Server
                 //}
             }
         }
-
         public static void EmergencyBroadcast(object sth)
         {
             for (int i = 0; i < m_players.Count; i++)
@@ -281,10 +239,8 @@ namespace Server
                     continue;
                 }
                 //}
-
             }
         }
-
         // 分配 ID 卡
         static int DistributeId()
         {
@@ -299,7 +255,6 @@ namespace Server
                 throw new Exception("尝试发 ID 卡，然而早就发完了");
             }
         }
-
         // 回收 ID 卡
         static void RecycleId(int id)
         {
@@ -313,7 +268,6 @@ namespace Server
                 m_idCards.Add(id);
             }
         }
-
         // 随机分配房间号码
         static string DistributeRoomId(string id = null)
         {
@@ -345,9 +299,7 @@ namespace Server
                     throw new Exception(string.Format("ID {0} 早就被发走了", id));
                 }
             }
-
         }
-
         // 回收房间号码
         static void RecycleRoomId(string roomId)
         {
@@ -361,16 +313,13 @@ namespace Server
                 m_roomIds.Add(roomId);
             }
         }
-
         // 开启邮差线程
         static void StartPostman(Player player)
         {
             Thread inPostmanThread = new Thread(new ThreadStart(player.InPostmanJob));
             Thread outPostmanThread = new Thread(new ThreadStart(player.OutPostmanJob));
-
             inPostmanThread.Name = player.id + "收件邮差";
             outPostmanThread.Name = player.id + "发件邮差";
-
             // 启动邮差线程
             // 此时必须保证客户端已经连接上服务器
             inPostmanThread.Start();
@@ -379,10 +328,8 @@ namespace Server
             // alive:
             while (!inPostmanThread.IsAlive) ;
             while (!outPostmanThread.IsAlive) ;
-
             //m_postManagerThread.Start();
         }
-
         /// <summary>
         /// 开一个新房间
         /// </summary>
@@ -418,7 +365,6 @@ namespace Server
                 }
             }
         }
-
         /// <summary>
         /// 回收已经没有玩家的房间
         /// </summary>
@@ -435,9 +381,7 @@ namespace Server
                 RecycleRoomId(stopServiceRoomId[i]);
             }
         }
-
         // 打开一个新的房间
-
         // 接待处：等待客户端连接
         public static void WaitClient()
         {
@@ -448,18 +392,14 @@ namespace Server
             while (true)
             {
                 MyConsole.Log("等待客户端接入"/*, Thread.CurrentThread.Name*/, MyConsole.LogType.Debug);
-
                 m_waitingCustomerEvent.Set();
                 // 接收客户端连接
                 Socket socket = m_socket.Accept();
                 MyConsole.Log("接收连接 " + socket.RemoteEndPoint.ToString(),/* Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
-
                 // 指示已经有客户端连接，准备开始接待事宜
                 m_waitingCustomerEvent.Reset();
-
                 // 获取首先触发的事件
                 //idx = WaitHandle.WaitAny(m_events);
-
                 //// 等待断线处理工作完成
                 //m_doneHandleDisconnect.WaitOne();
                 //// 等待游戏流程完成
@@ -467,29 +407,22 @@ namespace Server
                 //// 重置
                 //m_doneHandleDisconnect.Reset();
                 //m_doneGameLoopEvent.Reset();
-
                 // 先回收已经停止服务的房间
                 RecycleRooms();
-
                 // 等待所有房间收到开始接待的事件
                 for (int i = 0; i < m_rooms.Count; i++)
                 {
                     m_rooms[i].receivedEvent.WaitOne();
                 }
-
                 // 指示没有完成接待
                 m_doneReceptEvent.Reset();
-
                 // 创建玩家实例
                 Player thisPlayer = new Player(socket);
-
                 try
                 {
                     // 如果玩家数目已经超出范围
-
                     // 获取玩家的用户名
                     thisPlayer.name = (string)thisPlayer.Respond();
-
                     // 接收玩家选择的匹配模式
                     int mode = (int)thisPlayer.Respond();
                     // 返回客户端的消息
@@ -541,7 +474,6 @@ namespace Server
                         bool isOpen = idx >= 0;
                         // 告知客户端此房间开了没有
                         thisPlayer.Respond(isOpen);
-
                         // 如果这个房间开了
                         if (isOpen)
                         {
@@ -609,7 +541,6 @@ namespace Server
                         // 如果这是一个旧房间，接待完成后自动会开始服务
                         else
                         {
-
                         }
                         m_rooms[idx].SetOk2Loop();
                     }
@@ -624,29 +555,22 @@ namespace Server
                 {
                     // 断开和这个客户端的连接
                     socket.Close();
-
                     // Get stack trace for the exception with source file information
                     var st = new StackTrace(ex, true);
-
                     StackFrame[] frames = st.GetFrames();
-
                     for (int i = 0; i < frames.Length; i++)
                     {
                         MyConsole.Log(frames[i].ToString());
                     }
-
                     MyConsole.Log(ex.Message);
-
                 }
                 finally
                 {
                     // 标志完成接待工作
                     m_doneReceptEvent.Set();
                 }
-
                 // 分配 ID 卡
                 //int id = DistributeId();
-
                 // 指示正在等待客户端连接
                 //if (m_players.Count < 4)
                 //{
@@ -656,21 +580,15 @@ namespace Server
                 //string name = (string)Respond(socket, id);
                 // 新增客户端
                 //m_players.Add(new Player("temp-name", id, socket));
-
-
-
                 ////Player thisPlayer = m_players.Last();
                 //// 启动邮差
                 ////StartPostman(thisPlayer);
-
                 //// 获取名字，发送 ID
                 //MyConsole.Log("准备从" + socket.RemoteEndPoint.ToString() + "获取用户名",/* Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
-
                 //string name = (string)Respond(id, id, 2);
                 //m_players.Last().name = name;
                 ////Console.WriteLine("用户" + name + "进入房间；ID = " + id.ToString());
                 //MyConsole.Log("用户" + name + "进入房间；ID = " + id.ToString(), /*Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
-
                 //}
                 //// 如果游戏玩家已经满员
                 //else
@@ -684,14 +602,10 @@ namespace Server
                 //    //Console.WriteLine("用户" + name + "进入房间；ID = " + id.ToString());
                 //    MyConsole.Log("用户" + name + "进入房间；ID = " + id.ToString(), /*Thread.CurrentThread.Name,*/ MyConsole.LogType.Debug);
                 //}
-
                 // 先锁住对该客户端的网络通信，好在主线程里做同步
                 //m_players.Last().Lock();
-
-
                 // 发送给新加入客户端，指示要先运行的线程的代码
                 //Respond(id, idx, 2);
-
                 //}
                 //// 如果上面 Respond 一句发生异常，可能是掉线
                 //catch (Exception e)
@@ -711,12 +625,10 @@ namespace Server
                 //{
                 //    m_gameReadyEvent.Set();
                 //}
-
                 // 触发先被阻塞的线程启动
                 //m_events[idx].Set();
             }
         }
-
         // 结束对某个玩家的服务，断开连接
         // 
         public static void EndService(int id)
@@ -728,10 +640,8 @@ namespace Server
             RecycleId(id);
             //Console.WriteLine("已断开用户" + thisPlayer.name + "的连接");
             MyConsole.Log("已断开用户" + thisPlayer.name + "的连接", /*"ComServer",*/ MyConsole.LogType.Debug);
-
             m_players.RemoveAll(client => client.id == id);
         }
-
         ///// <summary>
         ///// 检查有没有主动关闭连接的同学，关闭掉线同学的连接
         ///// </summary>
@@ -753,8 +663,6 @@ namespace Server
         //    }
         //    return disconnectPlayers;
         //}
-
-
         /// <summary>
         /// 检查有没有主动关闭连接的同学，关闭掉线同学的连接
         /// </summary>
@@ -767,13 +675,11 @@ namespace Server
             //if (m_waitingCustomerEvent.WaitOne(0))
             //{
             //if (doneReceptEvent.WaitOne(0))
-
             //{
             //doneReceptEvent.WaitOne();
             // 等待游戏流程完成工作
             //m_doneGameLoopEvent.WaitOne();
             //MyConsole.Log("准备开始断线处理"/*, Thread.CurrentThread.Name*/, MyConsole.LogType.Debug);
-
             // 指示还没有完成断线处理工作
             //m_doneHandleDisconnect.Reset();
             // 检查每个客户端
@@ -782,7 +688,6 @@ namespace Server
                 Player player = m_players[i];
                 int id = player.id;
                 string name = player.name;
-
                 try
                 {
                     // 询问该玩家是否主动断开连接
@@ -807,7 +712,6 @@ namespace Server
                             // 记名字
                             abnormallyDisconnectedUserNames.Add(name);
                         }
-
                         // 终止对他的服务
                         EndService(id);
                         continue;
@@ -818,12 +722,9 @@ namespace Server
                     // 有可能这里断线了
                     // 终止对他的服务
                     EndService(id);
-
                     abnormallyDisconnectedUserNames.Add(name);
-
                     continue;
                 }
-
                 // 如果这个用户掉线了
                 if (player.IsDisconnected())
                 {
@@ -839,22 +740,17 @@ namespace Server
                     i++;
                 }
             }
-
-
             // 指示已经完成断线处理工作
             //m_doneHandleDisconnect.Set();
             //Thread.Sleep(1000);
-
             //}
             //}
             // 如果正在处理客户端连接后的事宜
             //else
             //{
-
             //}
             //}
         }
-
         // 解锁所有玩家
         public static void UnlockAll()
         {
@@ -863,6 +759,5 @@ namespace Server
                 m_players[i].Unlock();
             }
         }
-
     }
 }

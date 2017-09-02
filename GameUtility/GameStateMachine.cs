@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-
 namespace GameUtility
 {
     public class GameStateMachine
@@ -30,10 +29,8 @@ namespace GameUtility
             FryBury,    // 炒底阶段的埋底
             Fry2FindFriend,     // 炒底阶段到寻友的过渡阶段
             FindFriend,     // 寻友阶段
-
             FindFriend2Linger,  // 寻友到停留的过渡
             FindFriendLinger,   // 寻友阶段之后的停留阶段
-
             FindFriend2Fight,   // 寻友到对战的过渡阶段
             //Fry2Fight,  // 炒底到对战的缓冲阶段
             Fight,   // 对战阶段
@@ -76,12 +73,10 @@ namespace GameUtility
             //DoneFry2Fight,  // 完成炒底-对战缓冲阶段的清理, 初始化
             DoneFry2FindFriend, // 完成炒底到寻友的过渡
             //DoneFindFriend,     // 完成寻友
-
             IsFightAlone,   // 庄家选择单打
             HasFriend,      // 庄家有朋友
             DoneFindFriend2Linger,  // 完成寻友到停留的过渡
             DoneFindFriendLinger,   // 完成寻友停留
-
             DoneFindFriend2Fight,   // 完成寻友到对战的过渡
             PlayerHandCardAllEmpty, // 所有玩家的手牌为空
             DoneFight2Score,    // 完成对战-计分缓冲阶段的清理, 初始化
@@ -93,7 +88,6 @@ namespace GameUtility
             FinishRounds,      // 完成指定局数
             FinishOneRound      // 完成一局
         };
-
         // 根据信号更新游戏状态机
         public void Update(Signal signal)
         {
@@ -102,7 +96,6 @@ namespace GameUtility
                 //case Signal.NotReady:
                 //    m_state = State.GetReady;
                 //    break;
-
                 case Signal.Ready:
                     m_state = State.Ready2Deal;
                     break;

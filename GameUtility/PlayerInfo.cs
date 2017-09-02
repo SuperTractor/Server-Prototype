@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-
 namespace GameUtility
 {
     [Serializable]
@@ -22,9 +21,7 @@ namespace GameUtility
         public string title { get; set; }
         // 是否在线标记
         public bool isOnline { get; set; }
-
         // 游戏统计数据部分
-
         //// 玩家的等级
         //public int level { get; set; }
         //// 玩家的分数
@@ -33,19 +30,15 @@ namespace GameUtility
         //// 手牌空的位置用 null 表示
         //public List<Card> cardInHand /*{ get; set; }*/;
         //public Card[] cardInHand { get; set; }
-
         // 统计数据部分
-
         // 玩家的积分；计算方法见 UpdateStat
         // 升 1 级加 5 分；做 1 次台上方加 2 分；逃跑一次扣 3 分；逃跑的惩罚在program中实现
         public int grades { get; set; }
-
         // 玩家的等级；目前因为未解锁头像只有 6 个，所以一共是 7 级；暂定最高 7 级
         // 按照分数段来确定级别（按照 grades 来确定）
         // 100*(i-1)^2 ~ 100*i^2 为第 i 级分数段
         // 比如 3600~4900 为第 7 级
         public int level { get; set; }
-
         // 最高得分
         public int highScore { get; set; }
         // 累计得分
@@ -54,7 +47,6 @@ namespace GameUtility
         public int highLevel { get; set; }
         // 累计级数
         public int totalLevel { get; set; }
-
         // 总抢底次数
         public int totalBidTimes { get; set; }
         // 总炒底次数
@@ -81,13 +73,10 @@ namespace GameUtility
         public int highBottomScores { get; set; }
         // 总逃跑次数
         public int totalRunTimes { get; set; }
-
         // 总台上次数
         public int totalUpperTimes { get; set; }
         // 胜率；平均台上方次数
         public float upperRate { get; set; }
-
-
         public PlayerInfo()
         {
             username = "";
@@ -95,7 +84,6 @@ namespace GameUtility
             headImageName = "";
             title = "";
         }
-
         public PlayerInfo(string name)
         {
             this.username = name;
@@ -107,7 +95,6 @@ namespace GameUtility
             this.id = id;
             //cardInHand = new List<Card>();
         }
-
         public PlayerInfo(PlayerInfo other)
         {
             id = other.id;
@@ -126,7 +113,6 @@ namespace GameUtility
             highLevel = other.highLevel;
             // 累计级数
             totalLevel = other.totalLevel;
-
             // 总抢底次数
             totalBidTimes = other.totalBidTimes;
             // 总炒底次数
@@ -149,9 +135,7 @@ namespace GameUtility
             highBottomScores = other.highBottomScores;
             // 总逃跑次数
             totalRunTimes = other.totalRunTimes;
-
             totalBuryTimes = other.totalBuryTimes;
-
             aveBuryScores = other.aveBuryScores;
             totalUpperTimes = other.totalUpperTimes;
             upperRate = other.upperRate;
@@ -161,7 +145,6 @@ namespace GameUtility
             title = other.title;
             isOnline = other.isOnline;
         }
-
         public void CopyBasicInfoFrom(PlayerInfo other)
         {
             username = other.username;
@@ -171,7 +154,6 @@ namespace GameUtility
             isOnline = other.isOnline;
             title = other.title;
         }
-
         // 更新玩家统计信息
         public void UpdateStat()
         {
@@ -180,7 +162,6 @@ namespace GameUtility
             //highLevel = Math.Max(highLevel, level);
             //highScore = Math.Max(highScore, score);
         }
-
         // 更新玩家统计信息
         public void UpdateStat(
             int level/*,int score*/, int addLevel, int bidtimes, int frytimes, int burytimes, int buryscore, int singletimes, int findFriendTimes, bool isbanker,
@@ -192,12 +173,10 @@ namespace GameUtility
             totalLevel += addLevel;
             // 升 1 级加 5 分
             grades += addLevel * 5;
-
             //总抢底次数
             totalBidTimes += bidtimes;
             //总炒底次数
             totalFryTimes += frytimes;
-
             // 更新总埋底分数
             totalBuryScores += buryscore;
             //总埋底次数
@@ -228,9 +207,7 @@ namespace GameUtility
                 totalBottomScores += bottomsuccessscore;
                 highBottomScores = Math.Max(bottomsuccessscore, highBottomScores);
             }
-
             //总逃跑次数
-
             // 如果做了台上方
             if (isUpper)
             {
@@ -239,10 +216,8 @@ namespace GameUtility
                 // 做 1 次台上方，加 2 分
                 grades += 2;
             }
-
             //totalScore += score;
             //highScore = Math.Max(highScore, score);
-
             // 更新级数
             if (grades < 0)
             {
@@ -253,7 +228,6 @@ namespace GameUtility
                 this.level = (int)(Math.Sqrt(grades / 100.0f)) + 1;
             }
         }
-
         public static int GetLevel(int experience)
         {
             // 更新级数
@@ -266,6 +240,5 @@ namespace GameUtility
                 return (int)(Math.Sqrt(experience / 100.0f)) + 1;
             }
         }
-
     }
 }

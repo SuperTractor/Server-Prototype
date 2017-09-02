@@ -1,15 +1,11 @@
 ﻿#define DATABASE
 //#undef DATABASE
-
 #undef RULE
-
 // 调试抢底
 //#define DEBUG_BID_1
 #undef DEBUG_BID_1
-
 #define READY_STAGE
 //#undef READY_STAGE
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,26 +31,19 @@ using ConsoleUtility;
 //using Database;
 using DatabaseUtility;
 using DBNetworking;
-
 namespace Server
 {
     public class Program
     {
-
         static void Initialize()
         {
             Thread.CurrentThread.Name = "主线程";
             // 设置命令行的编码为 utf8
             Console.OutputEncoding = Encoding.Unicode;
-
-
-
             // 初始化 ComServer
             //ComServer.Initialize(Dealer.playerNumber, m_roomSize, m_doneGameLoopEvent);
             ComServer.Initialize(Dealer.playerNumber/*, m_roomSize, m_doneGameLoopEvent*/);
-
         }
-
         // 启动前台接待线程
         static void StartWaitClient()
         {
@@ -66,7 +55,6 @@ namespace Server
             // Spin for a while waiting for the started thread to become
             // alive:
             while (!waitThread.IsAlive) ;
-
         }
         // 启动断线处理线程
         // 在游戏开始前，这个线程负责实时更新玩家那边知道的房间内的玩家列表
@@ -81,29 +69,20 @@ namespace Server
             // Spin for a while waiting for the started thread to become
             // alive:
             while (!handlerThread.IsAlive) ;
-
         }
-
-
         static void Main(string[] args)
         {
             // 初始化服务器
             Initialize();
-
             // 启动前台接待线程
             StartWaitClient();
-
             // 启动断线经理
             //StartDisconnectHandler();
-
-
-
             // 死循环
             //while (true)
             //{
             // 等待游戏预备信号
             //ComServer.gameReadyEvent.WaitOne();
-
             //try
             //{
             // 开始游戏主循环
@@ -119,10 +98,7 @@ namespace Server
             //}
             //finally
             //{
-
             //}
-
-
             //// 开始游戏主循环
             //GameLoop();
             //}

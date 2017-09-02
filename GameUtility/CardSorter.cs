@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-
 namespace GameUtility
 {
     /// <summary>
@@ -22,7 +21,6 @@ namespace GameUtility
         int mainColor;
         // 第几局
         int m_round;
-
         // 深构造函数
         public CardSorter(int[] upperPlayersId, int[] playerLevels, int mainNumber, int mainColor, int round)
         {
@@ -34,7 +32,6 @@ namespace GameUtility
             this.mainColor = mainColor;
             m_round = round;
         }
-
         // 用荷官来构造排序家
         public CardSorter(Dealer dealer)
         {
@@ -46,7 +43,6 @@ namespace GameUtility
             mainColor = dealer.mainColor;
             m_round = dealer.round;
         }
-
         // 深构造函数：用另外一个排序家来构造
         // 用荷官来构造排序家
         public CardSorter(CardSorter other)
@@ -59,8 +55,6 @@ namespace GameUtility
             mainColor = other.mainColor;
             m_round = other.m_round;
         }
-
-
         /// <summary>
         /// 
         /// </summary>
@@ -73,7 +67,6 @@ namespace GameUtility
                 return;
             }
             List<Card> temp = new List<Card>();
-
             switch (mode)
             {
                 // 假设要排序的牌组里面没有大小鬼；将各种花色的牌分开，个数多的在前；同花色中，按照点数A、K、Q、J、10、9、8、7、6、5、4、3、2的顺序排列
@@ -150,7 +143,6 @@ namespace GameUtility
                     }
                     // 按黑桃-红桃-梅花-方块排好
                     int[] suitCodes = new int[4] { (int)Card.Suit.Spade, (int)Card.Suit.Heart, (int)Card.Suit.Club, (int)Card.Suit.Diamond };
-
                     for (int j = 0; j < suitCodes.Length; j++)
                     {
                         // 将这组牌按照要求的点数顺序排好
@@ -180,13 +172,11 @@ namespace GameUtility
             // 返回排序的结果
             cards = new List<Card>(temp);
         }
-
         // 规则组的主级数编码到网络的Card编码
         int MainNumber2Points(int n)
         {
             return (n + 1) % 13;
         }
-
         // 规则组的主级数编码到网络的Card编码
         Card.Suit MainColor2Suit(int n)
         {
@@ -205,7 +195,6 @@ namespace GameUtility
                     return Card.Suit.Joker0;
             }
         }
-
         /// <summary>
         /// 给特定玩家的牌排好序，方便他出牌
         /// 如果是出牌阶段调用，要求已经确定好台上方，玩家级数
@@ -223,7 +212,6 @@ namespace GameUtility
             {
                 return Array.IndexOf(upperPlayersId, id) >= 0;
             }
-
             // 不对空的；或者只有 1 张手牌进行排序
             if (cards.Count <= 1)
             {
@@ -262,12 +250,10 @@ namespace GameUtility
                         List<int> tempLevelsList = tempLevels.ToList();
                         tempLevelsList.RemoveAll(level => level == playerLevels[playerId]);
                         tempLevels = tempLevelsList.ToArray();
-
                         List<Card> levelCards = cards.FindAll(card => card.points == (playerLevels[playerId] - 1) % 13);
                         cards.RemoveAll(card => card.points == (playerLevels[playerId] - 1) % 13);
                         Sort(ref levelCards, 1);
                         temp.AddRange(levelCards);
-
                         // 然后才把其他台上方级数的牌排一下序
                         // 从大到小排序
                         Array.Sort(tempLevels, (level1, level2) => level2.CompareTo(level1));
@@ -324,19 +310,16 @@ namespace GameUtility
                             List<Card> mainCards = cards.FindAll(card => card.points == points && card.suit == suit);
                             cards.RemoveAll(card => card.points == points && card.suit == suit);
                             temp.AddRange(mainCards);
-
                             // 然后排出来点数是主级数，其他花色的牌
                             mainCards = cards.FindAll(card => card.points == points);
                             cards.RemoveAll(card => card.points == points);
                             Sort(ref mainCards, 1);
                             temp.AddRange(mainCards);
-
                             // 然后是其他点数，但花色是主花色的牌
                             mainCards = cards.FindAll(card => card.suit == suit);
                             cards.RemoveAll(card => card.suit == suit);
                             Sort(ref mainCards, 2);
                             temp.AddRange(mainCards);
-
                             // 最后是其他牌
                             mainCards = new List<Card>(cards);
                             Sort(ref mainCards, 2);
@@ -350,7 +333,6 @@ namespace GameUtility
                             cards.RemoveAll(card => card.points == points);
                             Sort(ref mainCards, 1);
                             temp.AddRange(mainCards);
-
                             // 然后排出来其他点数的牌
                             mainCards = new List<Card>(cards);
                             Sort(ref mainCards, 2);
@@ -362,6 +344,5 @@ namespace GameUtility
             // 完成排序，将数组放回传进来的牌组里
             cards = new List<Card>(temp);
         }
-
     }
 }

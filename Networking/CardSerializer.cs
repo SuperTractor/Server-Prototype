@@ -6,7 +6,6 @@ using GameUtility;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Runtime.Serialization;
-
 namespace Networking
 {
     // 专门用于网络传输牌的类
@@ -32,9 +31,7 @@ namespace Networking
             // 先接受 Int 数组存储的牌组
             int[] cards_int = (int[])Serializer.Receive(socket);
             //string test = (string)Serializer.Receive(socket);
-
             //Console.WriteLine(test);
-
             // 返回 Card 数组存储的牌组
             return Card.ToCard(cards_int);
             //return null;

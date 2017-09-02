@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
-
 namespace ConsoleUtility
 {
     public class MyConsole
@@ -13,7 +12,6 @@ namespace ConsoleUtility
             Error,
             Debug
         };
-
         /// <summary>
         /// 格式化的日志输出，特别是日期
         /// </summary>
@@ -39,12 +37,10 @@ namespace ConsoleUtility
             log += message;
             Console.WriteLine(log);
         }
-
         // 默认是 DEBUG 模式输出
         public static void Log(string message)
         {
             Log(message, LogType.Debug);
         }
-
     }
 }

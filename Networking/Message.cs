@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-
 namespace Networking
 {
     // 网络通信用的消息，可以理解成 信封+信件
@@ -16,7 +15,6 @@ namespace Networking
         //{
         //    get { return m_senderTag; }
         //}
-
         //// 收件人邮戳
         //private int m_receiverTag;
         //public int receiverTag
@@ -26,14 +24,12 @@ namespace Networking
         //        return m_receiverTag;
         //    }
         //}
-
         // 通信频道
         private int m_channel;
         public int channel
         {
             get { return m_channel; }
         }
-
         // 数据部分，信件
         private object m_data;
         public object data
@@ -43,7 +39,6 @@ namespace Networking
                 return m_data;
             }
         }
-
         // 构造函数
         public Message(/*int senderTag, int receiverTag,*/ object data,int channel)
         {
@@ -52,6 +47,5 @@ namespace Networking
             m_data = data;
             m_channel = channel;
         }
-
     }
 }

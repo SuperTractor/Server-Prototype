@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using DatabaseUtility;
 using GameUtility;
-
 namespace Server
 {
     /// <summary>
@@ -26,8 +25,6 @@ namespace Server
         //        Set("score", value);
         //    }
         //}
-
-
         // 统计数据部分
         // 最高得分
         public int highScore
@@ -77,7 +74,6 @@ namespace Server
                 Set("totalLevel", value);
             }
         }
-
         // 总抢底次数
         public int totalBidTimes
         {
@@ -234,7 +230,6 @@ namespace Server
                 Set("totalRunTimes", value);
             }
         }
-
         // 总台上次数
         public int totalUpperTimes
         {
@@ -283,7 +278,6 @@ namespace Server
                 Set("level", value);
             }
         }
-
         public StatObject()
         {
             //variables.Add(new NamedVariable("score", "int"));
@@ -291,7 +285,6 @@ namespace Server
             variables.Add(new NamedVariable("totalScore", "int"));
             variables.Add(new NamedVariable("highLevel", "int"));
             variables.Add(new NamedVariable("totalLevel", "int"));
-
             variables.Add(new NamedVariable("totalBidTimes", "int"));
             variables.Add(new NamedVariable("totalFryTimes", "int"));
             variables.Add(new NamedVariable("totalBuryScores", "int"));
@@ -309,13 +302,10 @@ namespace Server
             variables.Add(new NamedVariable("upperRate", "float"));
             variables.Add(new NamedVariable("grades", "int"));
             variables.Add(new NamedVariable("level", "int"));
-
-
             highScore = 0;
             totalScore = 0;
             highLevel = 0;
             totalLevel = 0;
-
             totalBidTimes = 0;
             totalFryTimes = 0;
             totalBuryScores = 0;
@@ -334,23 +324,18 @@ namespace Server
             grades = 0;
             level = 1;
         }
-
         public StatObject(DataObject dataObj)
         {
             //variables = dataObj.variables;
             variables = new List<NamedVariable>(dataObj.variables);
-
         }
-
         public void CopyTo(PlayerInfo info)
         {
             info.username = username;
-
             info.highScore = highScore;
             info.totalScore = totalScore;
             info.highLevel = highLevel;
             info.totalLevel = totalLevel;
-
             info.totalBidTimes = totalBidTimes;
             info.totalFryTimes = totalFryTimes;
             info.totalBuryScores = totalBuryScores;
@@ -368,19 +353,14 @@ namespace Server
             info.upperRate = upperRate;
             info.grades = grades;
             info.level = level;
-
         }
-
         public void CopyFrom(PlayerInfo info)
         {
             username = info.username;
-
-
             highScore = info.highScore;
             totalScore = info.totalScore;
             highLevel = info.highLevel;
             totalLevel = info.totalLevel;
-
             totalBidTimes = info.totalBidTimes;
             totalFryTimes = info.totalFryTimes;
             totalBuryScores = info.totalBuryScores;
@@ -398,7 +378,6 @@ namespace Server
             upperRate = info.upperRate;
             grades = info.grades;
             level = info.level;
-
         }
     }
 }

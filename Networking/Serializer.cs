@@ -6,7 +6,6 @@ using System.Text;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Runtime.Serialization;
-
 namespace Networking
 {
     public class Serializer
@@ -19,7 +18,6 @@ namespace Networking
                 return memoryStream.ToArray();
             }
         }
-
         public static object Deserialize(byte[] message)
         {
             using (var memoryStream = new MemoryStream(message))
@@ -54,7 +52,6 @@ namespace Networking
                 throw;
             }
         }
-
         //public static void SendNoWait(Socket mySocket, object sth)
         //{
         //    byte[] temp = Serialize(sth);
@@ -67,7 +64,6 @@ namespace Networking
         //        Console.Write(ex.Message);
         //    }
         //}
-
         public static int BufferSize = 4096;
         public static object Receive(Socket mySocket)
         {
@@ -93,6 +89,4 @@ namespace Networking
         //    return Deserialize(temp);
         //}
     }
-
-
 }

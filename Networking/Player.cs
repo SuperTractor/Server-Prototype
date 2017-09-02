@@ -8,10 +8,8 @@ using System.Threading;
 using System.Diagnostics;
 using System.IO;
 using ConsoleUtility;
-
 using System.Net;
 using DBNetworking;
-
 namespace Networking
 {
     public class Player
@@ -41,7 +39,6 @@ namespace Networking
                 m_name = value;
             }
         }
-
         // 用来同步线程的门
         private object m_monitor = new object();
         // 与该玩家通信的 socket
@@ -54,7 +51,6 @@ namespace Networking
             }
             //set;
         }
-
         // 和这个玩家对应的消息池，这是一个队列，0位头部，LAST为尾部
         // 专门开设 1 个邮差线程，负责接收和发送消息
         // 其他的线程只能从消息池里查看自己频道的消息，这样可以避免，某线程在侦听信道时，其他线程收到了它的消息，造成死锁
@@ -64,8 +60,6 @@ namespace Networking
         private List<Message> m_inMessagePool;
         // 发件箱
         private List<Message> m_outMessagePool;
-
-
         // 邮差管理员线程
         // 负责协调收发邮件，这是因为socket只有一个，相当于路只有1条，每次只能收或者发，2者不能同时进行
         // 这可不可以用锁代替？
@@ -75,12 +69,10 @@ namespace Networking
         private Thread m_inPostmanThread;
         // 收件邮差是否完成工作
         private bool m_doneReceive;
-
         // 收邮件延时等待时间（毫秒）
         static int receiveDelay = 20;
         //// 收邮件等待计时器
         //private Stopwatch m_receiveStopwatch;
-
         // 发件邮差线程
         private Thread m_outPostmanThread;
         // 发件邮差是否完成工作
@@ -94,17 +86,14 @@ namespace Networking
                 return m_isLocked;
             }
         }
-
         // 网络流
         Stream m_networkStream;
         // 二进制读取流，用于接收数据
         BinaryReader m_binaryReader;
         // 二进制写入流，用于发送数据
         BinaryWriter m_binaryWriter;
-
         // socket 接收的超时长度；如果超过这个时长还收不到来自客户端的消息，则认为他断线了，抛出异常
         int m_receiveTimeOut = 10000;
-
         /// <summary>
         /// 测试用的
         /// </summary>
@@ -117,7 +106,6 @@ namespace Networking
             m_socket.ReceiveTimeout = 0;
             return count;
         }
-
         /// <summary>
         /// 获取特定频道的最早消息
         /// </summary>
@@ -127,30 +115,22 @@ namespace Networking
         {
             Message thisMessage;
             //MyConsole.Log("准备从收件箱中获取频道" + channel.ToString() + "上来自客户端" + m_name + "的消息", "Player-Receive", MyConsole.LogType.Debug);
-
-
             //// 等待客户端从该频道发来消息
             //do
             //{
             //    thisMessage = m_inMessagePool.Find(message => message.channel == channel);
             //}
             //while (thisMessage == null);
-
             //MyConsole.Log("成功从收件箱中获得频道" + channel.ToString() + "上来自客户端" + m_name + "的消息", "Player-Receive", MyConsole.LogType.Debug);
-
             //thisMessage = (Message)Serializer.Receive(m_socket);
-
             // 先接收数据长度
             int size = m_binaryReader.ReadInt32();
             // 再接收数据
             byte[] buf = m_binaryReader.ReadBytes(size);
             // 反序列化
             thisMessage = (Message)Serializer.Deserialize(buf);
-
             return thisMessage;
         }
-
-
         /// <summary>
         /// 发送消息接口，将要发送的消息放进发件箱内
         /// </summary>
@@ -158,10 +138,8 @@ namespace Networking
         void Send(Message message)
         {
             //MyConsole.Log("准备向客户端" + m_name + "发件箱投放消息", "Player-Send", MyConsole.LogType.Debug);
-
             //m_outMessagePool.Add(message);
             //MyConsole.Log("成功向客户端" + m_name + "发件箱投放消息", "Player-Send", MyConsole.LogType.Debug);
-
             //Serializer.Send(m_socket, message);
             // 发送消息
             byte[] buf = Serializer.Serialize(message);
@@ -170,7 +148,6 @@ namespace Networking
             // 再发送数据本身
             m_binaryWriter.Write(buf);
         }
-
         // 服务器响应客户端请求
         //public static object Respond(Socket socket, object sth, int channel = 0)
         //{
@@ -199,7 +176,6 @@ namespace Networking
         //    // 返回请求信息
         //    return message.data;
         //}
-
         // 服务器响应客户端请求
         public Message Respond(Message msg)
         {
@@ -208,7 +184,6 @@ namespace Networking
             //    throw new Exception("尝试对锁住的客户端通信");
             //}
             Message message;
-
             //if (IsDisconnected())
             //{
             //    throw new Exception("客户端" + name + "断开了连接");
@@ -231,7 +206,6 @@ namespace Networking
             //}
             //// 一直等到获取到此频道的消息为止
             //while (message == null);
-
             //try
             //{
             //    // 等待客户端请求
@@ -243,12 +217,9 @@ namespace Networking
             //{
             //    throw new Exception("客户端" + thisPlayer.name + "断开了连接");
             //}
-
             // 发送消息
             Serializer.Send(m_socket, msg);
-
             //Send(msg);
-
             //try
             //{
             //    // 发送返回信息
@@ -262,7 +233,6 @@ namespace Networking
             //return obj;
             return message;
         }
-
         public object Respond(object sth=null,int channel = 0)
         {
             if (sth == null)
@@ -274,7 +244,6 @@ namespace Networking
                 return Respond(new Message(sth, channel)).data;
             }
         }
-
         // 服务器响应客户端请求
         //public static object Respond(Socket socket, object sth, int channel = 0)
         //{
@@ -303,8 +272,6 @@ namespace Networking
         //    // 返回请求信息
         //    return message.data;
         //}
-
-
         // 检查玩家是否断线
         public bool IsDisconnected()
         {
@@ -325,23 +292,19 @@ namespace Networking
             catch (Exception e)
             {
                 MyConsole.Log(e.Message, MyConsole.LogType.Error);
-
                 // 有异常，很可能断线了
                 return true;
             }
             //return isDisconnect;
-
             //int code = (int)Respond(0);
             //return code != 1;
             return false;
         }
-
         // 收件邮差线程
         public void InPostmanJob()
         {
             MyConsole.Log("正在启动客户端" + m_name + "的收件邮差", /*"Player-InPostmanJob",*/ MyConsole.LogType.Debug);
             //m_doneReceive = false;
-
             //Stopwatch receiveStopwatch = new Stopwatch();
             //receiveStopwatch.Start();
             // 还没有等待完
@@ -355,7 +318,6 @@ namespace Networking
                 // 不断接收客户端发送过来的消息，添进去收件池当中去
                 m_inMessagePool.Add((Message)Serializer.Receive(m_socket));
                 //}
-
                 //}
                 //// 如果玩家断线了
                 //catch (Exception e)
@@ -368,17 +330,12 @@ namespace Networking
             //m_doneReceive = true;
             MyConsole.Log("客户端" + m_name + "的收件邮差完成工作", /*"Player-InPostmanJob",*/ MyConsole.LogType.Debug);
             //MyConsole.Log("查看 socket 接收状态-" + m_socket.Available.ToString(), "Player-InPostmanJob", MyConsole.LogType.Debug);
-
         }
-
         // 发件邮差线程
         public void OutPostmanJob()
         {
             MyConsole.Log("正在启动客户端" + m_name + "的发件邮差", /*"Player-OutPostmanJob",*/ MyConsole.LogType.Debug);
-
-
             //MyConsole.Log("查看 socket 接收状态-" + m_socket.Available.ToString(), "Player-PostManagerJob", MyConsole.LogType.Debug);
-
             //try
             //{
             // 不断将发件箱里的消息，按时间顺序，发送到客户端
@@ -387,10 +344,8 @@ namespace Networking
                 //lock (m_monitor)
                 //{
                 MyConsole.Log("查看 socket 接收状态-" + m_socket.Available.ToString(), /*"Player-PostManagerJob",*/ MyConsole.LogType.Debug);
-
                 Serializer.Send(m_socket, m_outMessagePool[0]);
                 //}
-
                 m_outMessagePool.RemoveAt(0);
             }
             //}
@@ -401,9 +356,7 @@ namespace Networking
             //    // 不干了
             //}
             MyConsole.Log("客户端" + m_name + "的发件邮差完成工作", /*"Player-OutPostmanJob", */MyConsole.LogType.Debug);
-
         }
-
         // 邮差管理员线程
         void PostManagerJob()
         {
@@ -413,10 +366,8 @@ namespace Networking
             {
                 m_inPostmanThread = new Thread(new ThreadStart(InPostmanJob));
                 m_outPostmanThread = new Thread(new ThreadStart(OutPostmanJob));
-
                 m_inPostmanThread.Name = m_id + "收件邮差";
                 m_outPostmanThread.Name = m_id + "发件邮差";
-
                 // 首先去收件
                 m_inPostmanThread.Start();
                 while (m_inPostmanThread.ThreadState == System.Threading.ThreadState.Running)
@@ -424,8 +375,6 @@ namespace Networking
                     // 等待收件邮差结束工作
                 }
                 //MyConsole.Log("查看 socket 接收状态-" + m_socket.Available.ToString(), "Player-PostManagerJob", MyConsole.LogType.Debug);
-
-
                 // 然后去发件
                 m_outPostmanThread.Start();
                 while (m_outPostmanThread.ThreadState == System.Threading.ThreadState.Running)
@@ -434,9 +383,7 @@ namespace Networking
                 }
             }
             MyConsole.Log("客户端" + m_name + "断开连接", /*"Player-PostManagerJob",*/ MyConsole.LogType.Debug);
-
         }
-
         /// <summary>
         /// 构造函数
         /// </summary>
@@ -445,7 +392,6 @@ namespace Networking
         {
             m_socket = socket;
         }
-
         /// <summary>
         /// 构造函数
         /// </summary>
@@ -471,14 +417,11 @@ namespace Networking
             //m_postManagerThread.Name = m_id + "邮差管理员";
             // 新建计时器
             //m_receiveStopwatch = new Stopwatch();
-
             // 初始化网络通信流
             m_networkStream = new NetworkStream(m_socket);
             m_binaryReader = new BinaryReader(m_networkStream);
             m_binaryWriter = new BinaryWriter(m_networkStream);
-
         }
-
         // 加锁
         public void Lock()
         {
@@ -489,7 +432,6 @@ namespace Networking
         {
             m_isLocked = false;
         }
-
         /// <summary>
         /// 检查是否有特定频道的最早消息
         /// </summary>
@@ -499,7 +441,6 @@ namespace Networking
         {
             return m_inMessagePool.FindIndex(message => message.channel == channel);
         }
-
         /// <summary>
         /// 将不需要的信息倒进消息池内
         /// </summary>
@@ -508,14 +449,11 @@ namespace Networking
         {
             m_inMessagePool.Add(message);
         }
-
         /// <summary>
         /// 清空在 socket 中的消息
         /// </summary>
         public void ClearMessage()
         {
         }
-
-
     }
 }
