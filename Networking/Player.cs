@@ -391,6 +391,7 @@ namespace Networking
         public Player(Socket socket)
         {
             m_socket = socket;
+            m_socket.ReceiveTimeout = m_receiveTimeOut;
         }
         /// <summary>
         /// 构造函数
